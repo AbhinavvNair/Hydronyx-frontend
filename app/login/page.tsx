@@ -71,8 +71,8 @@ export default function Login() {
       // Small delay to ensure tokens are persisted
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Redirect to forecast dashboard
-      window.location.href = '/forecast';
+      // Redirect to persona selection (user-centric navigation)
+      window.location.href = '/personas';
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {

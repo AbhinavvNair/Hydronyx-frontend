@@ -30,6 +30,16 @@ interface AlertItem {
   threshold_exceeded: boolean;
 }
 
+interface AlertsResponse {
+  alerts: AlertItem[];
+  count: number;
+  timestamp: string;
+  source?: string;
+  last_updated?: string;
+  critical_count?: number;
+  top_critical?: AlertItem;
+}
+
 export default function Alerts() {
   return (
     <ProtectedRoute>
@@ -45,9 +55,16 @@ function AlertsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [isLive, setIsLive] = useState(false);
+  const [criticalCount, setCriticalCount] = useState<number | null>(null);
+  const [topCritical, setTopCritical] = useState<AlertItem | null>(null);
 
   useEffect(() => {
     loadAlerts();
+    // Poll every 60 seconds for live updates
+    const interval = setInterval(loadAlerts, 60000);
+    return () => clearInterval(interval);
   }, [filter]);
 
   const loadAlerts = async () => {
@@ -58,8 +75,13 @@ function AlertsContent() {
       if (filter) params.set('severity', filter);
       const res = await fetchWithAuth(`/api/alerts?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load alerts');
-      const data = await res.json();
+      const data: AlertsResponse = await res.json();
       setAlerts(data.alerts || []);
+      // Always show current local time instead of server time
+      setLastUpdated(new Date().toISOString());
+      setIsLive(data.source === 'simulated-live');
+      setCriticalCount(data.critical_count ?? null);
+      setTopCritical(data.top_critical ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load alerts');
     } finally {
@@ -185,6 +207,22 @@ function AlertsContent() {
             </div>
           )}
 
+          {/* Live Updates Banner */}
+          {lastUpdated && (
+            <div className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                <span className="text-cyan-400 text-sm font-medium">
+                  {isLive ? 'Live updates' : 'Last updated'}:{' '}
+                  {new Date(lastUpdated).toLocaleString()}
+                </span>
+              </div>
+              {isLive && (
+                <span className="text-xs text-gray-400">Simulated data</span>
+              )}
+            </div>
+          )}
+
           <div className="mb-6 flex gap-2">
             <button
               onClick={() => setFilter('')}
@@ -237,6 +275,32 @@ function AlertsContent() {
         </div>
 
         <Footer />
+
+        {/* Bottom Critical Alert Notification */}
+        {criticalCount && criticalCount > 0 && topCritical && (
+          <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-red-500/95 backdrop-blur-md border border-red-400/50 rounded-lg shadow-2xl p-4 z-50 animate-pulse">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-200 mt-0.5" size={20} />
+              <div className="flex-1">
+                <p className="text-red-100 font-semibold text-sm">
+                  {criticalCount === 1 ? 'Critical Alert' : `${criticalCount} Critical Alerts`}
+                </p>
+                <p className="text-red-200 text-xs mt-1">
+                  {topCritical.state}{topCritical.district ? ` - ${topCritical.district}` : ''}: {topCritical.message}
+                </p>
+                <p className="text-red-300 text-xs mt-1">
+                  GW: {topCritical.gw_level}m bgl • Trend: {topCritical.trend}
+                </p>
+              </div>
+              <button
+                onClick={() => setCriticalCount(null)}
+                className="text-red-200 hover:text-red-100 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

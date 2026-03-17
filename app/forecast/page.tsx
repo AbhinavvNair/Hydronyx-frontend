@@ -1,22 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/app/context/AuthContext';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import Footer from '@/app/components/Footer';
+import { AppShell } from '@/app/components/AppShell';
 import {
   BarChart3,
-  Settings2,
-  TrendingUp,
   CheckCircle,
-  LogOut,
-  Menu,
-  X,
+  TrendingUp,
   Zap,
   Signal,
   AlertCircle,
-  MapPin,
 } from 'lucide-react';
 import {
   LineChart,
@@ -62,8 +55,6 @@ export default function Forecast() {
 }
 
 function ForecastContent() {
-  const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [states, setStates] = useState<string[]>([]);
   const [districts, setDistricts] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState('');
@@ -212,73 +203,9 @@ function ForecastContent() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1428] via-[#0d1b3d] to-[#0a1428] flex">
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-0 h-full bg-[#0f1b35]/95 backdrop-blur-md border-r border-cyan-500/20 transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-        <div className="flex items-center justify-between h-20 px-4 border-b border-cyan-500/20">
-          {sidebarOpen && <span className="text-xl font-bold text-cyan-400">HydroAI</span>}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-cyan-400 hover:bg-cyan-500/20 p-2 rounded-lg transition">
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
-
-        <nav className="mt-8 space-y-2 px-4">
-          <Link href="/forecast" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer bg-cyan-500/20 text-cyan-400 border border-cyan-500/50`}>
-            <BarChart3 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Forecast</span>}
-          </Link>
-          <Link href="/policy" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <Settings2 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Policy</span>}
-          </Link>
-          <Link href="/optimizer" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <TrendingUp size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Optimizer</span>}
-          </Link>
-          <Link href="/validation" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <CheckCircle size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Validation</span>}
-          </Link>
-          <Link href="/location-gw" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <MapPin size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Location Insight</span>}
-          </Link>
-          <Link href="/alerts" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <AlertCircle size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Alerts</span>}
-          </Link>
-          <Link href="/drivers" className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50`}>
-            <BarChart3 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Drivers</span>}
-          </Link>
-        </nav>
-      </div>
-
-      {/* Main Content Wrapper - Added flex flex-col */}
-      <div className={`flex-1 flex flex-col min-h-screen ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-[#0a1428]/95 backdrop-blur-md border-b border-cyan-500/20 px-8 py-4 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Physics-Informed Forecast</h1>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-400">{user?.email || ''}</p>
-            </div>
-            <button onClick={handleLogout} className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition border border-red-500/50">
-              <LogOut size={18} />
-              <span className="text-sm">Log Out</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Content - Added flex-1 to push footer down */}
-        <div className="p-8 flex-1">
+    <AppShell title="Physics-Informed Forecast">
+      <div className="p-8 flex-1">
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
               <AlertCircle className="text-red-400" size={20} />
@@ -474,10 +401,6 @@ function ForecastContent() {
             </>
           )}
         </div>
-
-        {/* Footer Added Here */}
-        <Footer />
-      </div>
-    </div>
+    </AppShell>
   );
 }
