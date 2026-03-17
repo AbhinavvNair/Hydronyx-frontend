@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
+import { PersonaProvider } from "./context/PersonaContext";
 
 export const metadata: Metadata = {
   title: "HydroAI - Physics-Informed Groundwater Monitoring",
@@ -16,7 +17,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
         <AuthProvider>
-          {children}
+          <PersonaProvider>{children}</PersonaProvider>
         </AuthProvider>
       </body>
     </html>
