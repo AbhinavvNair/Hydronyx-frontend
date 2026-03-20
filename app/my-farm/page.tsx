@@ -72,16 +72,16 @@ const MyFarmMap = dynamic(() => import('./MyFarmMap'), {
   ),
 });
 
-function confidenceLabelHindi(conf: LocationInsightResponse['confidence']) {
-  if (conf === 'High') return 'Pakka';
-  if (conf === 'Medium') return 'Theek-Thak';
-  return 'Andaza';
+function confidenceLabel(conf: LocationInsightResponse['confidence']) {
+  if (conf === 'High') return 'High';
+  if (conf === 'Medium') return 'Medium';
+  return 'Low';
 }
 
-function pumpingHindi(p: PumpingLevel) {
-  if (p === 'low') return 'Kam';
-  if (p === 'high') return 'Zyada';
-  return 'Madhyam';
+function pumpingLabel(p: PumpingLevel) {
+  if (p === 'low') return 'Low';
+  if (p === 'high') return 'High';
+  return 'Medium';
 }
 
 function pumpingMultiplier(p: PumpingLevel) {
@@ -96,7 +96,7 @@ function suitabilityFromInsight(insight: LocationInsightResponse | null, pumping
       color: 'slate',
       label: '—',
       riskTitle: 'Select your farm location',
-      reasons: ['Pin drop karke apni location select karein.'],
+      reasons: ['Drop a pin on the map to select your location.'],
     };
   }
 
@@ -118,16 +118,16 @@ function suitabilityFromInsight(insight: LocationInsightResponse | null, pumping
   if (delta > 10) score += 1;
 
   const reasons: string[] = [];
-  if (deep) reasons.push(`Abhi paani lagbhag ${insight.current_level_m_bgl.toFixed(1)} m bgl par hai.`);
-  if (declining) reasons.push('Trend neeche ja raha hai (paani aur gehra ho sakta hai).');
-  if (delta > 6) reasons.push('Agle kuch saalon mein paani aur neeche jaane ka andaza hai.');
-  if (uncertain) reasons.push('Aapke aas-paas monitoring wells kam hain / data mismatch ho sakta hai.');
+  if (deep) reasons.push(`Current water level is approximately ${insight.current_level_m_bgl.toFixed(1)} m bgl.`);
+  if (declining) reasons.push('Trend is declining — water table may go deeper.');
+  if (delta > 6) reasons.push('Water is projected to drop further over the next few years.');
+  if (uncertain) reasons.push('Limited monitoring wells nearby — data confidence may be lower.');
 
   if (score >= 6) {
     return {
       color: 'red',
       label: 'Red',
-      riskTitle: 'High risk: borewell 3–5 saal mein fail ho sakta hai',
+      riskTitle: 'High risk: borewell may fail within 3–5 years',
       reasons,
     };
   }
@@ -135,14 +135,14 @@ function suitabilityFromInsight(insight: LocationInsightResponse | null, pumping
     return {
       color: 'yellow',
       label: 'Yellow',
-      riskTitle: 'Medium risk: borewell ke liye savdhaani rakhein',
+      riskTitle: 'Medium risk: proceed with caution for borewell',
       reasons,
     };
   }
   return {
     color: 'green',
     label: 'Green',
-    riskTitle: 'Lower risk: yahan borewell ki possibility theek hai',
+    riskTitle: 'Lower risk: borewell feasibility looks reasonable here',
     reasons,
   };
 }
@@ -168,7 +168,7 @@ function buildPumpingForecast(insight: LocationInsightResponse | null, pumping: 
   return points;
 }
 
-function hindiSummary(insight: LocationInsightResponse | null, pumping: PumpingLevel) {
+function summary(insight: LocationInsightResponse | null, pumping: PumpingLevel) {
   if (!insight) return '';
 
   const mult = pumpingMultiplier(pumping);
@@ -176,12 +176,12 @@ function hindiSummary(insight: LocationInsightResponse | null, pumping: PumpingL
   const abs = Math.abs(drop3y);
 
   if (drop3y > 0.25) {
-    return `Agar aap ${pumpingHindi(pumping)} pumping jaari rakhte hain, paani 3 saal mein lagbhag ${abs.toFixed(0)} m aur neeche chala jayega.`;
+    return `If you continue with ${pumpingLabel(pumping).toLowerCase()} pumping, the water table could drop by approximately ${abs.toFixed(0)} m over 3 years.`;
   }
   if (drop3y < -0.25) {
-    return `Agar aap ${pumpingHindi(pumping)} pumping rakhen, paani 3 saal mein lagbhag ${abs.toFixed(0)} m behtar ho sakta hai.`;
+    return `With ${pumpingLabel(pumping).toLowerCase()} pumping, the water table could recover by approximately ${abs.toFixed(0)} m over 3 years.`;
   }
-  return `Agar aap ${pumpingHindi(pumping)} pumping rakhen, aane wale 3 saal mein paani lagbhag stable reh sakta hai.`;
+  return `With ${pumpingLabel(pumping).toLowerCase()} pumping, the water table is expected to remain relatively stable over the next 3 years.`;
 }
 
 export default function MyFarm() {
@@ -243,10 +243,10 @@ export default function MyFarm() {
           label: z,
           riskTitle:
             z === 'Red'
-              ? 'High risk: borewell 3–5 saal mein fail ho sakta hai'
+              ? 'High risk: borewell may fail within 3–5 years'
               : z === 'Yellow'
-                ? 'Medium risk: borewell ke liye savdhaani rakhein'
-                : 'Lower risk: yahan borewell ki possibility theek hai',
+                ? 'Medium risk: proceed with caution for borewell'
+                : 'Lower risk: borewell feasibility looks reasonable here',
           reasons: plotResult.recommended_point.reasons || [],
         };
       }
@@ -260,7 +260,7 @@ export default function MyFarm() {
     [calibratedInsight, pumping]
   );
 
-  const summary = useMemo(() => hindiSummary(calibratedInsight, pumping), [calibratedInsight, pumping]);
+  const forecastSummary = useMemo(() => summary(calibratedInsight, pumping), [calibratedInsight, pumping]);
 
   const handlePick = (lat: number, lng: number) => {
     setLatitude(lat);
@@ -410,7 +410,7 @@ export default function MyFarm() {
               <div className="px-6 py-4 border-b border-cyan-500/20 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-white font-semibold">
                   <MapPin size={18} className="text-cyan-300" />
-                  Apna khet draw karein (polygon/rectangle)
+                  Draw your field boundary (polygon/rectangle)
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${badgeColor}`}>Zone: {suitability.label}</div>
               </div>
@@ -473,16 +473,16 @@ export default function MyFarm() {
                   <p className="text-xs text-gray-400 mb-1">Confidence</p>
                   <p className="text-2xl font-bold text-white">
                     {plotResult?.recommended_point
-                      ? confidenceLabelHindi(plotResult.recommended_point.confidence as any)
+                      ? confidenceLabel(plotResult.recommended_point.confidence as any)
                       : calibratedInsight
-                        ? confidenceLabelHindi(calibratedInsight.confidence)
+                        ? confidenceLabel(calibratedInsight.confidence)
                         : '--'}
                   </p>
                   {calibratedInsight && (
                     <p className="text-xs text-gray-400 mt-1">
                       {calibratedInsight.confidence === 'Low'
-                        ? 'Aapke aas-paas monitoring wells kam hain.'
-                        : 'Nearby wells ka data use hua hai.'}
+                        ? 'Limited monitoring wells in this area.'
+                        : 'Based on nearby well data.'}
                     </p>
                   )}
                 </div>
@@ -578,7 +578,7 @@ export default function MyFarm() {
                 </div>
 
                 <div className="text-[11px] text-gray-400">
-                  Draw polygon/rectangle on the map to set your field boundary.
+                  Draw a polygon/rectangle on the map to set your field boundary.
                 </div>
 
                 <div>
@@ -596,7 +596,7 @@ export default function MyFarm() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-300 mb-2">Aapke bore/kua ka current level (m bgl) (optional)</label>
+                  <label className="block text-xs font-medium text-gray-300 mb-2">Your current borewell/well level (m bgl) (optional)</label>
                   <input
                     type="number"
                     value={userMeasurement}
@@ -610,7 +610,7 @@ export default function MyFarm() {
 
             <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white">Future pumping impact</h3>
-              <p className="text-sm text-cyan-100/60 mt-1">"Agar main pumping aise hi rakhoon to kya hoga?"</p>
+              <p className="text-sm text-cyan-100/60 mt-1">"What happens if I keep pumping at this rate?"</p>
 
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {(['low', 'medium', 'high'] as PumpingLevel[]).map((p) => (
@@ -623,14 +623,14 @@ export default function MyFarm() {
                         : 'bg-slate-900/40 text-gray-300 border-cyan-500/10 hover:border-cyan-400/40'
                     }`}
                   >
-                    {pumpingHindi(p)}
+                    {pumpingLabel(p)}
                   </button>
                 ))}
               </div>
 
               <div className="mt-4 bg-slate-900/40 border border-purple-500/20 rounded-lg p-4">
-                <p className="text-sm text-white font-semibold">Hindi summary</p>
-                <p className="mt-2 text-sm text-gray-200">{summary || 'Risk check run karein aur phir yahan summary milegi.'}</p>
+                <p className="text-sm text-white font-semibold">Summary</p>
+                <p className="mt-2 text-sm text-gray-200">{forecastSummary || 'Run a risk check to see a forecast summary here.'}</p>
               </div>
 
               <div className="mt-4">
@@ -658,8 +658,8 @@ export default function MyFarm() {
               <h3 className="text-lg font-bold text-white">Alerts (area-based)</h3>
               <p className="text-sm text-gray-200 mt-2">
                 {calibratedInsight
-                  ? `Aapka area ${suitability.label} zone ki taraf ja raha hai. Recharge ya pumping kam karne par vichaar karein.`
-                  : 'Run risk check to see alerts for your area.'}
+                  ? `Your area is trending toward the ${suitability.label} zone. Consider recharging or reducing pumping.`
+                  : 'Run a risk check to see alerts for your area.'}
               </p>
             </div>
           </div>
@@ -671,9 +671,9 @@ export default function MyFarm() {
               {plotResult?.recommended_point?.nearest_stations ? 'Plot Analysis: Nearby Wells Used' : 'Point Analysis: Nearby Wells Used'}
             </h3>
             <p className="text-sm text-gray-300 mt-1">
-              {plotResult?.recommended_point?.nearest_stations 
-                ? 'Stations used for plot analysis recommended point' 
-                : 'Distances show how close monitoring wells are to your clicked location.'}
+              {plotResult?.recommended_point?.nearest_stations
+                ? 'Stations used for plot analysis recommended point'
+                : 'Distances show how close monitoring wells are to your selected location.'}
             </p>
 
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
