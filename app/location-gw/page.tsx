@@ -63,10 +63,10 @@ export default function LocationGW() {
   );
 }
 
-function confidenceHindiLabel(c: LocationInsightResponse['confidence']) {
-  if (c === 'High') return 'Pakka';
-  if (c === 'Medium') return 'Theek-Thak';
-  return 'Andaza';
+function confidenceLabel(c: LocationInsightResponse['confidence']) {
+  if (c === 'High') return 'High';
+  if (c === 'Medium') return 'Medium';
+  return 'Low';
 }
 
 function confidencePercent(c: LocationInsightResponse['confidence']) {
@@ -90,7 +90,6 @@ function LocationGWContent() {
   const calibratedResult = useMemo(() => {
     if (!result) return null;
     if (userMeasurement === '' || Number.isNaN(Number(userMeasurement))) return result;
-
     const obs = Number(userMeasurement);
     const bias = obs - result.current_level_m_bgl;
     return {
@@ -102,11 +101,7 @@ function LocationGWContent() {
         lower_bound: p.lower_bound + bias,
         upper_bound: p.upper_bound + bias,
       })),
-      meta: {
-        ...(result.meta || {}),
-        _calibrated: true,
-        _bias_m: bias,
-      },
+      meta: { ...(result.meta || {}), _calibrated: true, _bias_m: bias },
     };
   }, [result, userMeasurement]);
 
@@ -124,26 +119,16 @@ function LocationGWContent() {
   const handleGetInsight = async () => {
     setLoading(true);
     setError('');
-
     try {
       const response = await fetchWithAuth('/api/location/groundwater', {
         method: 'POST',
-        body: JSON.stringify({
-          latitude,
-          longitude,
-          months_ahead: monthsAhead,
-          k,
-          power: 2.0,
-        }),
+        body: JSON.stringify({ latitude, longitude, months_ahead: monthsAhead, k, power: 2.0 }),
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `Failed to get location insight (${response.status})`);
       }
-
-      const data: LocationInsightResponse = await response.json();
-      setResult(data);
+      setResult(await response.json());
     } catch (e) {
       setError(`Error: ${e instanceof Error ? e.message : 'Failed to get insight'}`);
     } finally {
@@ -153,34 +138,22 @@ function LocationGWContent() {
 
   const handleDownloadPdf = async () => {
     setError('');
-
     try {
       const response = await fetchWithAuth('/api/location/report.pdf', {
         method: 'POST',
-        body: JSON.stringify({
-          latitude,
-          longitude,
-          months_ahead: monthsAhead,
-          k,
-          power: 2.0,
-        }),
+        body: JSON.stringify({ latitude, longitude, months_ahead: monthsAhead, k, power: 2.0 }),
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `Failed to download report (${response.status})`);
       }
-
       const contentType = response.headers.get('content-type') || '';
       if (!contentType.toLowerCase().includes('application/pdf')) {
         const txt = await response.text();
         throw new Error(`Unexpected response (content-type=${contentType}): ${txt.slice(0, 300)}`);
       }
-
-      const contentDisposition = response.headers.get('content-disposition') || '';
-      const m = /filename\s*=\s*"?([^";]+)"?/i.exec(contentDisposition);
+      const m = /filename\s*=\s*"?([^";]+)"?/i.exec(response.headers.get('content-disposition') || '');
       const filename = m?.[1] || 'location_groundwater_report.pdf';
-
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -206,9 +179,9 @@ function LocationGWContent() {
         )}
 
         <div className="grid grid-cols-3 gap-8">
+          {/* Input panel */}
           <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4">Input</h3>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Latitude</label>
@@ -218,22 +191,6 @@ function LocationGWContent() {
                   onChange={(e) => setLatitude(Number(e.target.value))}
                   className="w-full px-4 py-2 bg-slate-800 border border-cyan-500/30 text-white rounded-lg focus:outline-none focus:border-cyan-400"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Aapke kua/bore ka current level (m bgl) — optional
-                </label>
-                <input
-                  type="number"
-                  value={userMeasurement}
-                  onChange={(e) => setUserMeasurement(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full px-4 py-2 bg-slate-800 border border-cyan-500/30 text-white rounded-lg focus:outline-none focus:border-cyan-400"
-                  placeholder="e.g. 32"
-                />
-                <p className="text-xs text-gray-400 mt-2">
-                  (Agar aap apna measurement dalte hain, hum forecast ko local bias se calibrate kar dete hain.)
-                </p>
               </div>
 
               <div>
@@ -248,13 +205,26 @@ function LocationGWContent() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Your current borewell / well level (m bgl) — optional
+                </label>
+                <input
+                  type="number"
+                  value={userMeasurement}
+                  onChange={(e) => setUserMeasurement(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-slate-800 border border-cyan-500/30 text-white rounded-lg focus:outline-none focus:border-cyan-400"
+                  placeholder="e.g. 32"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  If provided, the forecast will be calibrated to correct for local bias using your measurement.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
                   Forecast Horizon: <span className="text-cyan-400">{monthsAhead} months</span>
                 </label>
                 <input
-                  type="range"
-                  min="1"
-                  max="12"
-                  value={monthsAhead}
+                  type="range" min="1" max="12" value={monthsAhead}
                   onChange={(e) => setMonthsAhead(Number(e.target.value))}
                   className="w-full accent-cyan-400"
                 />
@@ -265,10 +235,7 @@ function LocationGWContent() {
                   Nearest Stations (k): <span className="text-cyan-400">{k}</span>
                 </label>
                 <input
-                  type="range"
-                  min="3"
-                  max="25"
-                  value={k}
+                  type="range" min="3" max="25" value={k}
                   onChange={(e) => setK(Number(e.target.value))}
                   className="w-full accent-cyan-400"
                 />
@@ -294,6 +261,7 @@ function LocationGWContent() {
             </div>
           </div>
 
+          {/* Results panel */}
           <div className="col-span-2 space-y-6">
             <div className="grid grid-cols-3 gap-4">
               <div className="p-6 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl">
@@ -321,12 +289,11 @@ function LocationGWContent() {
                   <div>
                     <p className="text-sm text-gray-400 mb-2">Confidence</p>
                     <p className="text-2xl font-bold text-cyan-400">
-                      {calibratedResult ? confidenceHindiLabel(calibratedResult.confidence) : '--'}
+                      {calibratedResult ? confidenceLabel(calibratedResult.confidence) : '--'}
                     </p>
                   </div>
                   <CheckCircle className="w-8 h-8 text-cyan-400 opacity-50" />
                 </div>
-
                 <div className="mt-3">
                   <div className="w-full h-2 rounded-full bg-slate-900/50 border border-cyan-500/10 overflow-hidden">
                     <div
@@ -337,8 +304,8 @@ function LocationGWContent() {
                   {calibratedResult && (
                     <p className="text-xs text-gray-400 mt-2">
                       {calibratedResult.confidence === 'Low'
-                        ? 'Aapke aas-paas monitoring wells kam hain, isliye yeh andaza utna pakka nahi hai.'
-                        : 'Nearby monitoring wells ke basis par estimate banaya gaya hai.'}
+                        ? 'Limited monitoring wells nearby — this estimate may be less accurate.'
+                        : 'Estimate based on nearby monitoring well data.'}
                     </p>
                   )}
                 </div>
@@ -352,25 +319,16 @@ function LocationGWContent() {
             )}
 
             <div className="bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-cyan-500/20 rounded-xl p-6">
-              <h2 className="text-xl font-bold text-white mb-4">We used these real nearby wells</h2>
-
+              <h2 className="text-xl font-bold text-white mb-4">Nearby monitoring wells used</h2>
               {!calibratedResult && <p className="text-gray-400">Run an insight to see the wells used.</p>}
-
               {calibratedResult && (
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {calibratedResult.nearest_stations.map((s) => (
-                    <div
-                      key={s.station_code}
-                      className="p-4 bg-slate-800/50 rounded-lg border border-cyan-500/20 hover:border-cyan-400/50 transition"
-                    >
+                    <div key={s.station_code} className="p-4 bg-slate-800/50 rounded-lg border border-cyan-500/20 hover:border-cyan-400/50 transition">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-white">
-                            {s.station_name} ({s.station_code})
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {s.district}, {s.state} • {s.distance_km.toFixed(1)} km
-                          </p>
+                          <p className="text-sm font-semibold text-white">{s.station_name} ({s.station_code})</p>
+                          <p className="text-xs text-gray-400">{s.district}, {s.state} • {s.distance_km.toFixed(1)} km</p>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold text-cyan-400">{s.gw_latest.toFixed(2)} m</p>
@@ -385,7 +343,6 @@ function LocationGWContent() {
 
             <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-6">
               <h2 className="text-xl font-bold text-white mb-6">Groundwater Forecast</h2>
-
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-900/40 rounded-lg border border-cyan-500/20 p-4">
                   <p className="text-sm text-gray-400 mb-1">Current Level</p>
@@ -397,9 +354,7 @@ function LocationGWContent() {
                 <div className="bg-slate-900/40 rounded-lg border border-cyan-500/20 p-4">
                   <p className="text-sm text-gray-400 mb-1">Trend</p>
                   <p className="text-2xl font-bold text-white">{calibratedResult ? calibratedResult.trend : '--'}</p>
-                  <p className="text-xs text-gray-400">
-                    {calibratedResult ? `${calibratedResult.trend_m_per_month.toFixed(3)} m/month` : ''}
-                  </p>
+                  <p className="text-xs text-gray-400">{calibratedResult ? `${calibratedResult.trend_m_per_month.toFixed(3)} m/month` : ''}</p>
                 </div>
                 <div className="bg-slate-900/40 rounded-lg border border-cyan-500/20 p-4">
                   <p className="text-sm text-gray-400 mb-1">Uncertainty</p>
@@ -412,40 +367,13 @@ function LocationGWContent() {
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                  <XAxis
-                    dataKey="month"
-                    stroke="#888"
-                    label={{ value: 'Months Ahead', position: 'insideBottomRight', offset: -5 }}
-                  />
+                  <XAxis dataKey="month" stroke="#888" label={{ value: 'Months Ahead', position: 'insideBottomRight', offset: -5 }} />
                   <YAxis stroke="#888" label={{ value: 'Level (m)', angle: -90, position: 'insideLeft' }} />
                   <Tooltip contentStyle={{ backgroundColor: '#0a1428', border: '1px solid #00d4ff' }} />
                   <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="upper_bound"
-                    stroke="#00d4ff"
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
-                    name="Upper Bound"
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="predicted"
-                    stroke="#00d4ff"
-                    strokeWidth={3}
-                    name="Predicted GW Level"
-                    dot={{ fill: '#00d4ff', r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="lower_bound"
-                    stroke="#00d4ff"
-                    strokeWidth={1}
-                    strokeDasharray="3 3"
-                    name="Lower Bound"
-                    dot={false}
-                  />
+                  <Line type="monotone" dataKey="upper_bound" stroke="#00d4ff" strokeWidth={1} strokeDasharray="3 3" name="Upper Bound" dot={false} />
+                  <Line type="monotone" dataKey="predicted" stroke="#00d4ff" strokeWidth={3} name="Predicted GW Level" dot={{ fill: '#00d4ff', r: 4 }} />
+                  <Line type="monotone" dataKey="lower_bound" stroke="#00d4ff" strokeWidth={1} strokeDasharray="3 3" name="Lower Bound" dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -456,8 +384,8 @@ function LocationGWContent() {
           </div>
         </div>
       </div>
-      
-      {/* Floating My Farm Button */}
+
+      {/* Floating My Farm button */}
       <div className="fixed bottom-6 right-6 z-50">
         <button
           onClick={() => router.push('/my-farm')}

@@ -1,12 +1,12 @@
 'use client';
 
-import Footer from "../components/Footer";
 import { ProtectedRoute } from "@/app/components/ProtectedRoute";
+import { AppShell } from "@/app/components/AppShell";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, TrendingUp, Map, Zap } from 'lucide-react';
+import { TrendingUp, Map, Zap } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
-import { apiGet, fetchWithAuth } from '@/lib/api';
+import { fetchWithAuth } from '@/lib/api';
 
 interface TimeseriesPoint {
   year_month: string;
@@ -26,10 +26,6 @@ interface ForecastHistoryItem {
   timestamp: string;
 }
 
-interface ValidationMetrics {
-  metrics: { r_squared: number; rmse: number; physics_compliance: number };
-}
-
 function DashboardContent() {
   const [chartData, setChartData] = useState<Array<{ period: string; level: number; predicted?: number; lower?: number; upper?: number }>>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +34,6 @@ function DashboardContent() {
   const [predictedLevel, setPredictedLevel] = useState<number | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [physicsCompliance, setPhysicsCompliance] = useState<number | null>(null);
-  const [selectedState, setSelectedState] = useState<string>('');
 
   useEffect(() => {
     loadDashboardData();
@@ -49,10 +44,7 @@ function DashboardContent() {
     setError('');
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+      if (!token) { setLoading(false); return; }
 
       const [historyRes, metricsRes, statesRes] = await Promise.all([
         fetchWithAuth('/api/forecast/history?limit=5'),
@@ -79,9 +71,8 @@ function DashboardContent() {
       }
 
       const stateForTimeseries = latestForecast?.params?.state || stateList[0] || 'maharashtra';
-      setSelectedState(stateForTimeseries);
-
       const tsRes = await fetchWithAuth(`/api/timeseries/state?state=${encodeURIComponent(stateForTimeseries)}`);
+
       if (tsRes.ok) {
         const ts: TimeseriesPoint[] = await tsRes.json();
         const points = (ts || []).map((p) => ({
@@ -90,31 +81,21 @@ function DashboardContent() {
         }));
         if (latestForecast?.result?.predictions_monthly?.length) {
           const base = points.length ? points[points.length - 1].level : latestForecast.result.predicted_level;
-          const monthly = latestForecast.result.predictions_monthly;
-          monthly.forEach((m, i) => {
-            points.push({
-              period: `+${m.month}`,
-              level: base,
-              predicted: m.predicted_level,
-              lower: m.lower_bound,
-              upper: m.upper_bound,
-            });
+          latestForecast.result.predictions_monthly.forEach((m) => {
+            points.push({ period: `+${m.month}`, level: base, predicted: m.predicted_level, lower: m.lower_bound, upper: m.upper_bound });
           });
         }
         setChartData(points);
-      } else {
-        if (latestForecast?.result?.predictions_monthly?.length) {
-          const monthly = latestForecast.result.predictions_monthly;
-          setChartData(
-            monthly.map((m) => ({
-              period: `Month ${m.month}`,
-              level: m.predicted_level,
-              predicted: m.predicted_level,
-              lower: m.lower_bound,
-              upper: m.upper_bound,
-            }))
-          );
-        }
+      } else if (latestForecast?.result?.predictions_monthly?.length) {
+        setChartData(
+          latestForecast.result.predictions_monthly.map((m) => ({
+            period: `Month ${m.month}`,
+            level: m.predicted_level,
+            predicted: m.predicted_level,
+            lower: m.lower_bound,
+            upper: m.upper_bound,
+          }))
+        );
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load dashboard');
@@ -124,25 +105,15 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1428] via-[#0d1b3d] to-[#0a1428]">
-      <header className="sticky top-0 z-40 bg-[#0a1428]/95 backdrop-blur-md border-b border-cyan-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
-            <ArrowLeft className="w-5 h-5 text-cyan-400" />
-            <span className="text-white">Back</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <div className="w-20"></div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <AppShell title="Dashboard">
+      <div className="p-8 flex-1">
         {error && (
           <div className="mb-6 p-4 bg-amber-500/20 border border-amber-500/50 rounded-lg text-amber-200 text-sm">
             {error}
           </div>
         )}
 
+        {/* Stats row */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
           <div className="p-6 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
             <div className="flex items-center justify-between">
@@ -193,6 +164,7 @@ function DashboardContent() {
           </div>
         </div>
 
+        {/* Chart + Quick actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 p-6 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
             <h2 className="text-xl font-bold text-white mb-6">
@@ -203,9 +175,9 @@ function DashboardContent() {
                 <p className="text-gray-400">Loading data...</p>
               </div>
             ) : chartData.length === 0 ? (
-              <div className="flex items-center justify-center h-80">
+              <div className="flex items-center justify-center h-80 gap-2">
                 <p className="text-gray-400">Generate a forecast to see chart</p>
-                <Link href="/forecast" className="ml-2 text-cyan-400 hover:underline">Go to Forecast</Link>
+                <Link href="/forecast" className="text-cyan-400 hover:underline">Go to Forecast</Link>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
@@ -213,49 +185,17 @@ function DashboardContent() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                   <XAxis dataKey="period" stroke="#888" />
                   <YAxis stroke="#888" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0a1428',
-                      border: '1px solid #00d4ff',
-                    }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0a1428', border: '1px solid #00d4ff' }} />
                   <Legend />
                   {chartData.some((d) => d.upper != null) && (
-                    <Area
-                      type="monotone"
-                      dataKey="upper"
-                      fill="#06b6d420"
-                      stroke="none"
-                      name="Upper bound"
-                    />
+                    <Area type="monotone" dataKey="upper" fill="#06b6d420" stroke="none" name="Upper bound" />
                   )}
                   {chartData.some((d) => d.lower != null) && (
-                    <Area
-                      type="monotone"
-                      dataKey="lower"
-                      fill="#06b6d420"
-                      stroke="none"
-                      name="Lower bound"
-                    />
+                    <Area type="monotone" dataKey="lower" fill="#06b6d420" stroke="none" name="Lower bound" />
                   )}
-                  <Line
-                    type="monotone"
-                    dataKey="level"
-                    stroke="#00d4ff"
-                    dot={false}
-                    strokeWidth={2}
-                    name="Level"
-                  />
+                  <Line type="monotone" dataKey="level" stroke="#00d4ff" dot={false} strokeWidth={2} name="Level" />
                   {chartData.some((d) => d.predicted != null) && (
-                    <Line
-                      type="monotone"
-                      dataKey="predicted"
-                      stroke="#22c55e"
-                      dot={false}
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      name="Forecast"
-                    />
+                    <Line type="monotone" dataKey="predicted" stroke="#22c55e" dot={false} strokeWidth={2} strokeDasharray="5 5" name="Forecast" />
                   )}
                 </ComposedChart>
               </ResponsiveContainer>
@@ -264,32 +204,22 @@ function DashboardContent() {
 
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white">Quick actions</h2>
-            <Link
-              href="/simulator"
-              className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition"
-            >
+            <Link href="/simulator" className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition">
               <p className="text-cyan-400 font-semibold">Policy simulator</p>
               <p className="text-gray-400 text-sm mt-2">Counterfactual analysis (SCM)</p>
             </Link>
-            <Link
-              href="/optimizer"
-              className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition"
-            >
+            <Link href="/optimizer" className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition">
               <p className="text-cyan-400 font-semibold">Site optimizer</p>
               <p className="text-gray-400 text-sm mt-2">Recharge site optimization</p>
             </Link>
-            <Link
-              href="/forecast"
-              className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition"
-            >
+            <Link href="/forecast" className="block p-4 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 hover:border-cyan-400/60 transition">
               <p className="text-cyan-400 font-semibold">Detailed forecast</p>
               <p className="text-gray-400 text-sm mt-2">ST-GNN & physics-informed</p>
             </Link>
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

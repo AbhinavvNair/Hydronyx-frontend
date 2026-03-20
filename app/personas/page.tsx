@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Users, Landmark, FlaskConical, ArrowRight, Droplet } from 'lucide-react';
 import Footer from '@/app/components/Footer';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
@@ -10,16 +9,13 @@ import { usePersona, type Persona } from '@/app/context/PersonaContext';
 
 function PersonasContent() {
   const router = useRouter();
-  const { persona, setPersona } = usePersona();
-
-  useEffect(() => {
-    if (persona === 'farmers') router.push('/my-farm');
-    if (persona === 'planners') router.push('/dashboard');
-    if (persona === 'researchers') router.push('/validation');
-  }, [persona, router]);
+  const { setPersona } = usePersona();
 
   const pick = (p: Persona) => {
     setPersona(p);
+    if (p === 'farmers') router.push('/location-gw');
+    if (p === 'planners') router.push('/dashboard');
+    if (p === 'researchers') router.push('/validation');
   };
 
   return (

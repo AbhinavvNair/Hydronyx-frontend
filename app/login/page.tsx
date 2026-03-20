@@ -5,12 +5,10 @@ import Link from 'next/link';
 import { Droplet, Eye, EyeOff } from 'lucide-react';
 import { apiUrl } from '@/lib/api';
 
-// Reusing the RainEffect component to match the Home page
 const RainEffect = () => {
   const [drops, setDrops] = useState<{ left: string; delay: string; duration: string }[]>([]);
 
   useEffect(() => {
-    // Generate rain drops on client side to avoid hydration mismatch
     const newDrops = Array.from({ length: 50 }).map(() => ({
       left: `${Math.random() * 100}%`,
       delay: `${Math.random() * 2}s`,
@@ -32,7 +30,6 @@ const RainEffect = () => {
           }}
         />
       ))}
-      {/* Water Surface Gradient Overlay */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-[#0a1428] via-[#0a1428]/80 to-transparent z-10" />
     </div>
   );
@@ -63,15 +60,18 @@ export default function Login() {
       }
 
       const data = await response.json();
-      
-      // Store tokens in localStorage
+
+      // Store auth tokens
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('refresh_token', data.refresh_token);
-      
+
+      // Always clear saved persona so the role picker shows on every login
+      localStorage.removeItem('hydroai_persona');
+
       // Small delay to ensure tokens are persisted
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Redirect to persona selection (user-centric navigation)
+
+      // Redirect to persona selection
       window.location.href = '/personas';
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -81,19 +81,12 @@ export default function Login() {
   };
 
   return (
-    // Updated container background to match Home page
     <div className="min-h-screen bg-[#060b16] flex items-center justify-center px-4 relative overflow-hidden text-white selection:bg-cyan-500/30">
-      
-      {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-900/20 via-[#0a1428] to-[#060b16] z-0" />
       <RainEffect />
 
-      {/* Login Card */}
       <div className="relative z-20 w-full max-w-md">
-        {/* Added glass-panel class for consistent look */}
         <div className="bg-[#0a1428]/60 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-[0_0_40px_rgba(6,182,212,0.1)]">
-          
-          {/* Header */}
           <div className="flex items-center justify-center space-x-2 mb-8">
             <Droplet className="w-8 h-8 text-cyan-400 fill-cyan-400/20" />
             <span className="text-2xl font-bold text-white tracking-wide">HydroAI</span>
@@ -101,16 +94,13 @@ export default function Login() {
 
           <h1 className="text-3xl font-bold text-center text-white mb-8 text-shadow-glow">Sign In</h1>
 
-          {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg backdrop-blur-sm">
               <p className="text-red-400 text-sm">{error}</p>
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">
                 Email Address
@@ -126,7 +116,6 @@ export default function Login() {
               />
             </div>
 
-            {/* Password Input */}
             <div>
               <label className="block text-sm font-semibold text-gray-300 mb-2">
                 Password
@@ -147,16 +136,11 @@ export default function Login() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-cyan-400 transition"
                   disabled={loading}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Sign In Button */}
             <button
               type="submit"
               disabled={loading}
@@ -166,7 +150,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Links */}
           <div className="mt-6 space-y-3">
             <div className="text-center">
               <Link
@@ -176,7 +159,6 @@ export default function Login() {
                 Forgot Password?
               </Link>
             </div>
-
             <div className="text-center">
               <p className="text-gray-400 text-sm">
                 Don't have an account?{' '}
@@ -191,7 +173,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Footer Text */}
         <p className="text-center text-cyan-100/40 text-xs mt-8 font-light tracking-wider">
           Physics-Informed Groundwater Monitoring System
         </p>

@@ -12,9 +12,9 @@ import {
   MapPin,
   Menu,
   Settings2,
-  Sprout,
   TrendingUp,
   UserCircle2,
+  FlaskConical,
   X,
 } from 'lucide-react';
 import Footer from '@/app/components/Footer';
@@ -34,36 +34,17 @@ function personaLabel(p: Persona | null) {
   return 'Choose role';
 }
 
-function navForPersona(p: Persona | null): NavItem[] {
-  if (p === 'farmers') {
-    return [
-      { href: '/my-farm', label: 'My Farm', icon: <Sprout size={20} /> },
-      { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
-      { href: '/alerts', label: 'Alerts', icon: <AlertCircle size={20} /> },
-      { href: '/forecast', label: 'Forecast', icon: <BarChart3 size={20} /> },
-    ];
-  }
-  if (p === 'researchers') {
-    return [
-      { href: '/validation', label: 'Validation', icon: <CheckCircle size={20} /> },
-      { href: '/drivers', label: 'Drivers', icon: <BarChart3 size={20} /> },
-      { href: '/forecast', label: 'Forecast', icon: <BarChart3 size={20} /> },
-      { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
-    ];
-  }
-  if (p === 'planners') {
-    return [
-      { href: '/dashboard', label: 'Dashboard', icon: <Home size={20} /> },
-      { href: '/forecast', label: 'Forecast', icon: <BarChart3 size={20} /> },
-      { href: '/policy', label: 'Policy', icon: <Settings2 size={20} /> },
-      { href: '/optimizer', label: 'Optimizer', icon: <TrendingUp size={20} /> },
-      { href: '/validation', label: 'Validation', icon: <CheckCircle size={20} /> },
-      { href: '/alerts', label: 'Alerts', icon: <AlertCircle size={20} /> },
-      { href: '/drivers', label: 'Drivers', icon: <BarChart3 size={20} /> },
-    ];
-  }
-  return [{ href: '/personas', label: 'Choose role', icon: <UserCircle2 size={20} /> }];
-}
+const ALL_NAV_ITEMS: NavItem[] = [
+  { href: '/dashboard',   label: 'Dashboard',        icon: <Home size={20} /> },
+  { href: '/forecast',    label: 'Forecast',         icon: <BarChart3 size={20} /> },
+  { href: '/policy',      label: 'Policy',           icon: <Settings2 size={20} /> },
+  { href: '/optimizer',   label: 'Optimizer',        icon: <TrendingUp size={20} /> },
+  { href: '/validation',  label: 'Validation',       icon: <CheckCircle size={20} /> },
+  { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
+  { href: '/alerts',      label: 'Alerts',           icon: <AlertCircle size={20} /> },
+  { href: '/drivers',     label: 'Drivers',          icon: <BarChart3 size={20} /> },
+  { href: '/simulator',   label: 'Simulator',        icon: <FlaskConical size={20} /> },
+];
 
 export function AppShell({
   title,
@@ -78,8 +59,6 @@ export function AppShell({
   const { persona, setPersona } = usePersona();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navItems = useMemo(() => navForPersona(persona), [persona]);
-
   const handleLogout = () => {
     logout();
     window.location.href = '/login';
@@ -92,6 +71,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a1428] via-[#0d1b3d] to-[#0a1428] flex">
+      {/* Sidebar */}
       <div
         className={`fixed left-0 top-0 h-full bg-[#0f1b35]/95 backdrop-blur-md border-r border-cyan-500/20 transition-all duration-300 z-40 ${
           sidebarOpen ? 'w-64' : 'w-20'
@@ -126,8 +106,8 @@ export function AppShell({
           </button>
         </div>
 
-        <nav className="mt-5 space-y-2 px-4">
-          {navItems.map((item) => {
+        <nav className="mt-5 space-y-1 px-4 overflow-y-auto max-h-[calc(100vh-160px)]">
+          {ALL_NAV_ITEMS.map((item) => {
             const active = pathname === item.href;
             return (
               <Link
@@ -147,6 +127,7 @@ export function AppShell({
         </nav>
       </div>
 
+      {/* Main content */}
       <div
         className={`flex-1 flex flex-col min-h-screen ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}
       >
