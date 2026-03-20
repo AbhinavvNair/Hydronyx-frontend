@@ -1,33 +1,30 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/app/context/AuthContext';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import Footer from '@/app/components/Footer';
+import { AppShell } from '@/app/components/AppShell';
 import {
-  BarChart3,
-  Settings2,
-  TrendingUp,
-  CheckCircle,
-  LogOut,
-  Menu,
-  X,
   AlertCircle,
   AlertTriangle,
   Info,
-  MapPin,
+  RefreshCw,
+  X,
+  TrendingDown,
+  TrendingUp,
+  Minus,
 } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/api';
 
 interface AlertItem {
   state: string;
   district?: string;
-  severity: string;
+  severity: 'critical' | 'high' | 'medium' | string;
   message: string;
   gw_level: number;
   trend: string;
   threshold_exceeded: boolean;
+  predicted_level?: number;
+  trend_m_per_month?: number;
 }
 
 interface AlertsResponse {
@@ -49,259 +46,294 @@ export default function Alerts() {
 }
 
 function AlertsContent() {
-  const { user, logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
-  const [isLive, setIsLive] = useState(false);
   const [criticalCount, setCriticalCount] = useState<number | null>(null);
   const [topCritical, setTopCritical] = useState<AlertItem | null>(null);
+  const [dismissedBanner, setDismissedBanner] = useState(false);
 
   useEffect(() => {
     loadAlerts();
-    // Poll every 60 seconds for live updates
     const interval = setInterval(loadAlerts, 60000);
     return () => clearInterval(interval);
   }, [filter]);
 
-  const loadAlerts = async () => {
-    setLoading(true);
+  const loadAlerts = async (isManual = false) => {
+    if (isManual) setRefreshing(true);
+    else setLoading(true);
     setError('');
+
     try {
       const params = new URLSearchParams();
       if (filter) params.set('severity', filter);
+
+      // Primary: fetch from the alerts API which uses real prediction data
       const res = await fetchWithAuth(`/api/alerts?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to load alerts');
+      if (!res.ok) throw new Error(`API returned ${res.status}`);
+
       const data: AlertsResponse = await res.json();
       setAlerts(data.alerts || []);
-      // Always show current local time instead of server time
       setLastUpdated(new Date().toISOString());
-      setIsLive(data.source === 'simulated-live');
       setCriticalCount(data.critical_count ?? null);
       setTopCritical(data.top_critical ?? null);
+      setDismissedBanner(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load alerts');
+      // Fallback: derive alerts from forecast history if the alerts endpoint fails
+      try {
+        const histRes = await fetchWithAuth('/api/forecast/history?limit=50');
+        if (!histRes.ok) throw new Error('Forecast history unavailable');
+        const histData = await histRes.json();
+        const forecasts = histData.forecasts || [];
+
+        const derived: AlertItem[] = forecasts
+          .filter((f: any) => f?.result?.predicted_level != null)
+          .map((f: any) => {
+            const level = f.result.predicted_level as number;
+            const trend = f.result.trend_direction ?? (f.result.uncertainty > 3 ? 'declining' : 'stable');
+            const trendPerMonth = f.result.trend_m_per_month ?? 0;
+
+            let severity: AlertItem['severity'] = 'medium';
+            let message = '';
+
+            if (level > 50 || trend === 'declining' && trendPerMonth > 0.3) {
+              severity = 'critical';
+              message = `Predicted level ${level.toFixed(1)} m bgl — critically deep. Immediate attention needed.`;
+            } else if (level > 30 || trend === 'declining') {
+              severity = 'high';
+              message = `Predicted level ${level.toFixed(1)} m bgl — declining trend detected.`;
+            } else {
+              message = `Predicted level ${level.toFixed(1)} m bgl — moderate stress, monitor closely.`;
+            }
+
+            return {
+              state: f.params?.state ?? 'Unknown',
+              district: f.params?.district,
+              severity,
+              message,
+              gw_level: level,
+              trend,
+              threshold_exceeded: level > 40,
+              predicted_level: level,
+              trend_m_per_month: trendPerMonth,
+            } as AlertItem;
+          })
+          .filter((a: AlertItem) => !filter || a.severity === filter);
+
+        // Sort: critical → high → medium
+        const order = { critical: 0, high: 1, medium: 2 };
+        derived.sort((a, b) => (order[a.severity as keyof typeof order] ?? 3) - (order[b.severity as keyof typeof order] ?? 3));
+
+        setAlerts(derived);
+        setLastUpdated(new Date().toISOString());
+
+        const criticals = derived.filter(a => a.severity === 'critical');
+        setCriticalCount(criticals.length);
+        setTopCritical(criticals[0] ?? null);
+        setDismissedBanner(false);
+      } catch {
+        setError('Could not load alerts. Please check your connection and try again.');
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
+  const getSeverityStyle = (s: string) => {
+    if (s === 'critical') return 'border-red-500/50 bg-red-500/10';
+    if (s === 'high') return 'border-amber-500/50 bg-amber-500/10';
+    return 'border-yellow-500/50 bg-yellow-500/10';
   };
 
-  const getSeverityColor = (s: string) => {
-    if (s === 'critical') return 'border-red-500/50 bg-red-500/10 text-red-400';
-    if (s === 'high') return 'border-amber-500/50 bg-amber-500/10 text-amber-400';
-    return 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400';
+  const getSeverityTextColor = (s: string) => {
+    if (s === 'critical') return 'text-red-400';
+    if (s === 'high') return 'text-amber-400';
+    return 'text-yellow-400';
   };
 
   const getSeverityIcon = (s: string) => {
-    if (s === 'critical') return <AlertCircle className="w-5 h-5" />;
-    if (s === 'high') return <AlertTriangle className="w-5 h-5" />;
-    return <Info className="w-5 h-5" />;
+    if (s === 'critical') return <AlertCircle className="w-5 h-5 shrink-0" />;
+    if (s === 'high') return <AlertTriangle className="w-5 h-5 shrink-0" />;
+    return <Info className="w-5 h-5 shrink-0" />;
+  };
+
+  const getTrendIcon = (trend: string) => {
+    if (trend === 'declining') return <TrendingDown className="w-4 h-4 text-red-400" />;
+    if (trend === 'improving') return <TrendingUp className="w-4 h-4 text-green-400" />;
+    return <Minus className="w-4 h-4 text-gray-400" />;
+  };
+
+  const severityCounts = {
+    critical: alerts.filter(a => a.severity === 'critical').length,
+    high: alerts.filter(a => a.severity === 'high').length,
+    medium: alerts.filter(a => a.severity === 'medium').length,
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1428] via-[#0d1b3d] to-[#0a1428] flex">
-      {/* Sidebar */}
-      <div
-        className={`fixed left-0 top-0 h-full bg-[#0f1b35]/95 backdrop-blur-md border-r border-cyan-500/20 transition-all duration-300 z-40 ${
-          sidebarOpen ? 'w-64' : 'w-20'
-        }`}
-      >
-        <div className="flex items-center justify-between h-20 px-4 border-b border-cyan-500/20">
-          {sidebarOpen && <span className="text-xl font-bold text-cyan-400">HydroAI</span>}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-cyan-400 hover:bg-cyan-500/20 p-2 rounded-lg transition"
-          >
-            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
+    <AppShell title="Groundwater Stress Alerts">
+      <div className="p-8 flex-1">
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
+            <AlertCircle className="text-red-400 shrink-0" size={20} />
+            <p className="text-red-400 text-sm">{error}</p>
+          </div>
+        )}
 
-        <nav className="mt-8 space-y-2 px-4">
-          <Link
-            href="/forecast"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <BarChart3 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Forecast</span>}
-          </Link>
-          <Link
-            href="/policy"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <Settings2 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Policy</span>}
-          </Link>
-          <Link
-            href="/optimizer"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <TrendingUp size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Optimizer</span>}
-          </Link>
-          <Link
-            href="/validation"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <CheckCircle size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Validation</span>}
-          </Link>
-          <Link
-            href="/location-gw"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <MapPin size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Location Insight</span>}
-          </Link>
-          <Link
-            href="/alerts"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer bg-cyan-500/20 text-cyan-400 border border-cyan-500/50"
-          >
-            <AlertCircle size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Alerts</span>}
-          </Link>
-          <Link
-            href="/drivers"
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg transition cursor-pointer text-gray-400 hover:bg-slate-800/50"
-          >
-            <BarChart3 size={20} />
-            {sidebarOpen && <span className="text-sm font-medium">Drivers</span>}
-          </Link>
-        </nav>
-      </div>
-
-      {/* Main Content Wrapper */}
-      <div
-        className={`flex-1 flex flex-col min-h-screen ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}
-      >
-        {/* Top Bar */}
-        <div className="sticky top-0 z-30 bg-[#0a1428]/95 backdrop-blur-md border-b border-cyan-500/20 px-8 py-4 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-white">Groundwater Stress Alerts</h1>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-400">{user?.email || ''}</p>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 flex items-center gap-4">
+            <AlertCircle className="text-red-400 w-8 h-8 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-400">Critical</p>
+              <p className="text-2xl font-bold text-red-400">{severityCounts.critical}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition border border-red-500/50"
-            >
-              <LogOut size={18} />
-              <span className="text-sm">Log Out</span>
-            </button>
+          </div>
+          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-4">
+            <AlertTriangle className="text-amber-400 w-8 h-8 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-400">High</p>
+              <p className="text-2xl font-bold text-amber-400">{severityCounts.high}</p>
+            </div>
+          </div>
+          <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 flex items-center gap-4">
+            <Info className="text-yellow-400 w-8 h-8 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-400">Medium</p>
+              <p className="text-2xl font-bold text-yellow-400">{severityCounts.medium}</p>
+            </div>
           </div>
         </div>
 
-        <div className="p-8 flex-1">
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
-              <AlertCircle className="text-red-400" size={20} />
-              <p className="text-red-400 text-sm">{error}</p>
+        {/* Last updated + refresh */}
+        {lastUpdated && (
+          <div className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-cyan-400 text-sm">
+                Last updated: {new Date(lastUpdated).toLocaleString()}
+              </span>
             </div>
-          )}
-
-          {/* Live Updates Banner */}
-          {lastUpdated && (
-            <div className="mb-4 p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-                <span className="text-cyan-400 text-sm font-medium">
-                  {isLive ? 'Live updates' : 'Last updated'}:{' '}
-                  {new Date(lastUpdated).toLocaleString()}
-                </span>
-              </div>
-              {isLive && (
-                <span className="text-xs text-gray-400">Simulated data</span>
-              )}
-            </div>
-          )}
-
-          <div className="mb-6 flex gap-2">
             <button
-              onClick={() => setFilter('')}
-              className={`px-4 py-2 rounded-lg ${
-                !filter ? 'bg-cyan-500/30 text-cyan-400' : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
-              }`}
+              onClick={() => loadAlerts(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 text-xs text-cyan-300 hover:text-cyan-200 transition disabled:opacity-50"
             >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('critical')}
-              className={`px-4 py-2 rounded-lg ${
-                filter === 'critical' ? 'bg-red-500/30 text-red-400' : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
-              }`}
-            >
-              Critical
-            </button>
-            <button
-              onClick={() => setFilter('high')}
-              className={`px-4 py-2 rounded-lg ${
-                filter === 'high' ? 'bg-amber-500/30 text-amber-400' : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
-              }`}
-            >
-              High
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
+        )}
 
-          {loading ? (
-            <div className="flex justify-center py-16">
-              <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-            </div>
-          ) : alerts.length === 0 ? (
-            <div className="p-8 bg-slate-800/50 rounded-xl border border-cyan-500/20 text-center text-gray-400">
-              No alerts found
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {alerts.map((a, i) => (
-                <div key={i} className={`p-4 rounded-xl border ${getSeverityColor(a.severity)} flex items-center gap-4`}>
+        {/* Filter buttons */}
+        <div className="mb-6 flex gap-2">
+          {[
+            { value: '', label: 'All' },
+            { value: 'critical', label: 'Critical' },
+            { value: 'high', label: 'High' },
+            { value: 'medium', label: 'Medium' },
+          ].map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setFilter(value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                filter === value
+                  ? value === 'critical' ? 'bg-red-500/30 text-red-400'
+                    : value === 'high' ? 'bg-amber-500/30 text-amber-400'
+                    : value === 'medium' ? 'bg-yellow-500/30 text-yellow-400'
+                    : 'bg-cyan-500/30 text-cyan-400'
+                  : 'bg-slate-800 text-gray-400 hover:bg-slate-700'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Alert list */}
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
+          </div>
+        ) : alerts.length === 0 ? (
+          <div className="p-8 bg-slate-800/50 rounded-xl border border-cyan-500/20 text-center text-gray-400">
+            No alerts found{filter ? ` for severity: ${filter}` : ''}.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {alerts.map((a, i) => (
+              <div
+                key={i}
+                className={`p-5 rounded-xl border ${getSeverityStyle(a.severity)} flex items-start gap-4`}
+              >
+                <div className={getSeverityTextColor(a.severity)}>
                   {getSeverityIcon(a.severity)}
-                  <div className="flex-1">
-                    <p className="font-semibold">{a.state}{a.district ? ` - ${a.district}` : ''}</p>
-                    <p className="text-sm opacity-90">{a.message}</p>
-                    <p className="text-xs opacity-70 mt-1">Trend: {a.trend} - GW: {a.gw_level}m bgl</p>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`font-semibold ${getSeverityTextColor(a.severity)}`}>
+                      {a.state}{a.district ? ` — ${a.district}` : ''}
+                    </p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full border ${getSeverityStyle(a.severity)} ${getSeverityTextColor(a.severity)}`}>
+                      {a.severity.toUpperCase()}
+                    </span>
+                    {a.threshold_exceeded && (
+                      <span className="text-xs px-2 py-0.5 rounded-full border border-red-500/40 bg-red-500/10 text-red-300">
+                        Threshold exceeded
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-200 mt-1">{a.message}</p>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                    <span>GW level: <span className="text-white font-medium">{a.gw_level.toFixed(1)} m bgl</span></span>
+                    <span className="flex items-center gap-1">
+                      Trend: {getTrendIcon(a.trend)}
+                      <span className="text-white font-medium">{a.trend}</span>
+                      {a.trend_m_per_month != null && (
+                        <span className="ml-1">({a.trend_m_per_month > 0 ? '+' : ''}{a.trend_m_per_month.toFixed(3)} m/mo)</span>
+                      )}
+                    </span>
+                    {a.predicted_level != null && (
+                      <span>Predicted: <span className="text-cyan-300 font-medium">{a.predicted_level.toFixed(1)} m</span></span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        <Footer />
-
-        {/* Bottom Critical Alert Notification */}
-        {criticalCount && criticalCount > 0 && topCritical && (
-          <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-red-500/95 backdrop-blur-md border border-red-400/50 rounded-lg shadow-2xl p-4 z-50 animate-pulse">
+      {/* Critical alert banner */}
+      {!dismissedBanner && criticalCount && criticalCount > 0 && topCritical && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-full max-w-lg px-4 z-50">
+          <div className="bg-red-600/95 backdrop-blur-md border border-red-400/50 rounded-xl shadow-2xl p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="text-red-200 mt-0.5" size={20} />
-              <div className="flex-1">
+              <AlertCircle className="text-red-200 mt-0.5 shrink-0" size={20} />
+              <div className="flex-1 min-w-0">
                 <p className="text-red-100 font-semibold text-sm">
-                  {criticalCount === 1 ? 'Critical Alert' : `${criticalCount} Critical Alerts`}
+                  {criticalCount === 1 ? '1 Critical Alert' : `${criticalCount} Critical Alerts`}
                 </p>
                 <p className="text-red-200 text-xs mt-1">
-                  {topCritical.state}{topCritical.district ? ` - ${topCritical.district}` : ''}: {topCritical.message}
+                  {topCritical.state}{topCritical.district ? ` — ${topCritical.district}` : ''}: {topCritical.message}
                 </p>
                 <p className="text-red-300 text-xs mt-1">
-                  GW: {topCritical.gw_level}m bgl • Trend: {topCritical.trend}
+                  GW: {topCritical.gw_level.toFixed(1)} m bgl · Trend: {topCritical.trend}
                 </p>
               </div>
               <button
-                onClick={() => setCriticalCount(null)}
-                className="text-red-200 hover:text-red-100 transition"
+                onClick={() => setDismissedBanner(true)}
+                className="text-red-200 hover:text-red-100 transition shrink-0"
               >
                 <X size={16} />
               </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </AppShell>
   );
 }
