@@ -49,10 +49,12 @@ const NAV_BY_PERSONA: Record<string, NavItem[]> = {
   ],
   researchers: [
     { href: '/forecast',    label: 'Forecast',         icon: <BarChart3 size={20} /> },
+    { href: '/policy',      label: 'Policy',           icon: <Settings2 size={20} /> },
+    { href: '/optimizer',   label: 'Optimizer',        icon: <TrendingUp size={20} /> },
     { href: '/validation',  label: 'Validation',       icon: <CheckCircle size={20} /> },
-    { href: '/drivers',     label: 'Drivers',          icon: <BarChart3 size={20} /> },
     { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
-    { href: '/simulator',   label: 'Simulator',        icon: <FlaskConical size={20} /> },
+    { href: '/alerts',      label: 'Alerts',           icon: <AlertCircle size={20} /> },
+    { href: '/drivers',     label: 'Drivers',          icon: <BarChart3 size={20} /> },
   ],
 };
 
@@ -84,10 +86,10 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { persona, setPersona } = usePersona();
+  const { persona, setPersona, ready } = usePersona();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const navItems = useMemo(() => navForPersona(persona), [persona]);
+  const navItems = useMemo(() => navForPersona(ready ? persona : null), [persona, ready]);
 
   const handleLogout = () => {
     logout();
@@ -129,14 +131,16 @@ export function AppShell({
             {sidebarOpen && (
               <div className="flex-1 text-left">
                 <div className="text-xs text-gray-400">Workspace</div>
-                <div className="text-sm font-semibold">{personaLabel(persona)}</div>
+                <div className="text-sm font-semibold">
+                  {ready ? personaLabel(persona) : '…'}
+                </div>
               </div>
             )}
           </button>
         </div>
 
         <nav className="mt-5 space-y-1 px-4 overflow-y-auto max-h-[calc(100vh-160px)]">
-          {navItems.map((item) => {
+          {ready && navItems.map((item) => {
             const active = pathname === item.href;
             return (
               <Link

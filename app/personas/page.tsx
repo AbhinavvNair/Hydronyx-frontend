@@ -15,7 +15,7 @@ function PersonasContent() {
     setPersona(p);
     if (p === 'farmers') router.push('/location-gw');
     if (p === 'planners') router.push('/dashboard');
-    if (p === 'researchers') router.push('/validation');
+    if (p === 'researchers') router.push('/forecast');
   };
 
   return (

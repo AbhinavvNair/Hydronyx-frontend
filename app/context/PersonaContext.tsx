@@ -7,6 +7,7 @@ export type Persona = 'farmers' | 'planners' | 'researchers';
 type PersonaContextValue = {
   persona: Persona | null;
   setPersona: (p: Persona | null) => void;
+  ready: boolean;
 };
 
 const PersonaContext = createContext<PersonaContextValue | undefined>(undefined);
@@ -15,6 +16,7 @@ const STORAGE_KEY = 'hydroai_persona';
 
 export function PersonaProvider({ children }: { children: React.ReactNode }) {
   const [persona, setPersonaState] = useState<Persona | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
@@ -25,6 +27,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    setReady(true);
   }, []);
 
   const setPersona = (p: Persona | null) => {
@@ -40,7 +43,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = useMemo(() => ({ persona, setPersona }), [persona]);
+  const value = useMemo(() => ({ persona, setPersona, ready }), [persona, ready]);
 
   return <PersonaContext.Provider value={value}>{children}</PersonaContext.Provider>;
 }
