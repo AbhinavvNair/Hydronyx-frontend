@@ -154,7 +154,7 @@ export default function Login() {
             </div>
             <div className="text-center">
               <p className="text-gray-400 text-sm">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link
                   href="/signup"
                   className="text-cyan-400 hover:text-cyan-300 font-semibold transition hover:underline decoration-cyan-400/50 underline-offset-4"

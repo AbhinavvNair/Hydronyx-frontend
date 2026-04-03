@@ -198,7 +198,7 @@ export default function Home() {
 
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight tracking-tight">
 
-            <span className="block text-glow text-white/90">Predicting Tomorrow's</span>
+            <span className="block text-glow text-white/90">Predicting Tomorrow&apos;s</span>
 
             <span className="bg-gradient-to-r from-cyan-200 via-cyan-400 to-blue-500 bg-clip-text text-transparent text-glow filter drop-shadow-lg">
 

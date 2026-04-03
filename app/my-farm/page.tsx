@@ -610,7 +610,7 @@ export default function MyFarm() {
 
             <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6">
               <h3 className="text-lg font-bold text-white">Future pumping impact</h3>
-              <p className="text-sm text-cyan-100/60 mt-1">"What happens if I keep pumping at this rate?"</p>
+              <p className="text-sm text-cyan-100/60 mt-1">&quot;What happens if I keep pumping at this rate?&quot;</p>
 
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {(['low', 'medium', 'high'] as PumpingLevel[]).map((p) => (
