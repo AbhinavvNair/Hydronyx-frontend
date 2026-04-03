@@ -57,13 +57,6 @@ function SimulatorContent() {
     setError('');
     setResults(null);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      if (!token) {
-        setError('Please sign in to run simulations');
-        setLoading(false);
-        return;
-      }
-
       const res = await fetchWithAuth('/api/policy/simulate', {
         method: 'POST',
         body: JSON.stringify({

@@ -48,9 +48,11 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // credentials:'include' so the browser stores the httpOnly cookie the server sets
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -59,19 +61,10 @@ export default function Login() {
         throw new Error(data.detail || 'Login failed');
       }
 
-      const data = await response.json();
-
-      // Store auth tokens
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-
+      // Tokens are stored in httpOnly cookies by the server — no localStorage writes needed
       // Always clear saved persona so the role picker shows on every login
       localStorage.removeItem('hydroai_persona');
 
-      // Small delay to ensure tokens are persisted
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Redirect to persona selection
       window.location.href = '/personas';
     } catch (err: any) {
       setError(err.message || 'An error occurred');

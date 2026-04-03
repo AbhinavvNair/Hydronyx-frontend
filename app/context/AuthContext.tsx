@@ -13,7 +13,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -23,32 +23,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if user is already logged in
+  // Check if user is already logged in (token carried automatically via httpOnly cookie)
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        try {
-          const response = await fetch(`${apiUrl}/api/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (response.ok) {
-            const data = await response.json();
-            setUser({
-              email: data.email,
-              name: data.name,
-              id: data.id,
-            });
-          } else {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-          }
-        } catch (error) {
-          console.error('Auth check failed:', error);
-          localStorage.removeItem('access_token');
+      try {
+        const response = await fetch(`${apiUrl}/api/auth/me`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser({ email: data.email, name: data.name, id: data.id });
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
       }
       setLoading(false);
     };
@@ -59,9 +46,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
+      // credentials:'include' ensures the browser stores the httpOnly cookie the server sets
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
@@ -69,33 +58,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Login failed');
       }
 
-      const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
-
-      // Get user data
+      // Fetch profile — cookie is sent automatically
       const userResponse = await fetch(`${apiUrl}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${data.access_token}`,
-        },
+        credentials: 'include',
       });
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        setUser({
-          email: userData.email,
-          name: userData.name,
-          id: userData.id,
-        });
+        setUser({ email: userData.email, name: userData.name, id: userData.id });
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+  const logout = async () => {
+    try {
+      await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    }
     setUser(null);
   };
 

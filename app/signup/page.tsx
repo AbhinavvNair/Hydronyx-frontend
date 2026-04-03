@@ -89,17 +89,15 @@ export default function Signup() {
         throw new Error(data.detail || 'Registration failed');
       }
 
-      // Auto login after signup
+      // Auto login after signup — credentials:'include' stores the httpOnly cookie
       const loginResponse = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       });
 
       if (loginResponse.ok) {
-        const loginData = await loginResponse.json();
-        localStorage.setItem('access_token', loginData.access_token);
-        localStorage.setItem('refresh_token', loginData.refresh_token);
         router.push('/dashboard');
       } else {
         router.push('/login');

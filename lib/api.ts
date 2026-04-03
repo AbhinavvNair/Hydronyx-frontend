@@ -3,35 +3,17 @@
  * Uses STGNN and physics-informed backend; all data from real APIs.
  */
 
-const getApiUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  }
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-};
-
-export const apiUrl = getApiUrl();
-
-function getAuthHeaders(): HeadersInit {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-}
+export const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export async function fetchWithAuth(
   path: string,
   options: RequestInit = {}
 ): Promise<Response> {
   const url = path.startsWith('http') ? path : `${apiUrl}${path}`;
-  const headers = new Headers(getAuthHeaders());
-  const existingHeaders = new Headers(options.headers);
-  existingHeaders.forEach((value, key) => headers.set(key, value));
-  return fetch(url, { ...options, headers });
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  new Headers(options.headers).forEach((value, key) => headers.set(key, value));
+  // credentials:'include' sends the httpOnly access_token cookie automatically
+  return fetch(url, { ...options, headers, credentials: 'include' });
 }
 
 export async function apiGet<T = unknown>(path: string): Promise<T> {

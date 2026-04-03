@@ -86,13 +86,6 @@ function ValidationContent() {
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('No authentication token found');
-        setLoading(false);
-        return;
-      }
-
       const metricsResponse = await fetchWithAuth('/api/validation/metrics');
       if (!metricsResponse.ok) {
         throw new Error('Failed to load validation metrics');

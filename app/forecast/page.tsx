@@ -109,13 +109,6 @@ function ForecastContent() {
     setDataLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('No authentication token found');
-        setDataLoading(false);
-        return;
-      }
-
       const [historyRes, statesRes] = await Promise.all([
         fetchWithAuth('/api/forecast/history?limit=10'),
         fetchWithAuth('/api/states'),
@@ -164,13 +157,6 @@ function ForecastContent() {
     setGenerating(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('No authentication token found');
-        setGenerating(false);
-        return;
-      }
-
       const response = await fetchWithAuth('/api/forecast/generate', {
         method: 'POST',
         body: JSON.stringify({

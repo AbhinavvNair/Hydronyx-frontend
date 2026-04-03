@@ -136,13 +136,10 @@ function PolicyContent() {
 
   const loadStates = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        const response = await fetchWithAuth('/api/policy/states');
-        if (response.ok) {
-          const data = await response.json();
-          setStates(data.states);
-        }
+      const response = await fetchWithAuth('/api/policy/states');
+      if (response.ok) {
+        const data = await response.json();
+        setStates(data.states);
       }
     } catch (error) {
       console.error('Failed to load states:', error);
@@ -153,13 +150,6 @@ function PolicyContent() {
     setSimulating(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('No authentication token found');
-        setSimulating(false);
-        return;
-      }
-
       const response = await fetchWithAuth('/api/policy/simulate', {
         method: 'POST',
         body: JSON.stringify({

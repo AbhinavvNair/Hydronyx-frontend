@@ -102,13 +102,6 @@ function OptimizerContent() {
     setOptimizing(true);
     setError('');
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError('No authentication token found');
-        setOptimizing(false);
-        return;
-      }
-
       const response = await fetchWithAuth('/api/optimizer/optimize', {
         method: 'POST',
         body: JSON.stringify({
