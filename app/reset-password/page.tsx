@@ -139,7 +139,29 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-[#060b16] flex items-center justify-center px-4 relative overflow-hidden text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-900/20 via-[#0a1428] to-[#060b16] z-0" />
       <RainEffect />
-      <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
+      <Suspense fallback={
+        <div className="relative z-20 w-full max-w-md">
+          <div className="bg-[#0a1428]/60 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-[0_0_40px_rgba(6,182,212,0.1)] animate-pulse">
+            <div className="flex items-center justify-center space-x-2 mb-8">
+              <div className="w-8 h-8 rounded-full bg-cyan-500/20" />
+              <div className="w-24 h-6 rounded bg-cyan-500/20" />
+            </div>
+            <div className="w-40 h-7 rounded bg-slate-700/60 mx-auto mb-2" />
+            <div className="w-56 h-4 rounded bg-slate-700/40 mx-auto mb-8" />
+            <div className="space-y-6">
+              <div>
+                <div className="w-28 h-4 rounded bg-slate-700/60 mb-2" />
+                <div className="w-full h-12 rounded-lg bg-slate-800/60" />
+              </div>
+              <div>
+                <div className="w-36 h-4 rounded bg-slate-700/60 mb-2" />
+                <div className="w-full h-12 rounded-lg bg-slate-800/60" />
+              </div>
+              <div className="w-full h-12 rounded-lg bg-cyan-500/20" />
+            </div>
+          </div>
+        </div>
+      }>
         <ResetPasswordContent />
       </Suspense>
     </div>

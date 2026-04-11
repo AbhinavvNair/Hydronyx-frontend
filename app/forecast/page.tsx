@@ -64,6 +64,8 @@ function ForecastContent() {
   const [laggingGW, setLaggingGW] = useState(45.0);
   
   const [history, setHistory] = useState<ForecastData[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
   const [currentForecast, setCurrentForecast] = useState<ForecastData | null>(null);
   const [generating, setGenerating] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
@@ -118,9 +120,10 @@ function ForecastContent() {
       const list = Array.isArray(stateList) ? stateList : [];
       setStates(list);
 
-      const historyData = historyRes.ok ? await historyRes.json() : { forecasts: [] };
+      const historyData = historyRes.ok ? await historyRes.json() : { forecasts: [], total: 0 };
       const forecastList = historyData.forecasts || [];
       setHistory(forecastList);
+      setHistoryTotal(historyData.total ?? forecastList.length);
 
       const latest = forecastList[0];
       if (latest) {
@@ -150,6 +153,20 @@ function ForecastContent() {
     } catch (err) {
       setError(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setDataLoading(false);
+    }
+  };
+
+  const loadMoreHistory = async () => {
+    setHistoryLoadingMore(true);
+    try {
+      const res = await fetchWithAuth(`/api/forecast/history?limit=10&skip=${history.length}`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory((prev) => [...prev, ...(data.forecasts || [])]);
+        setHistoryTotal(data.total ?? historyTotal);
+      }
+    } finally {
+      setHistoryLoadingMore(false);
     }
   };
 
@@ -366,8 +383,8 @@ function ForecastContent() {
               {history.length > 0 && (
                 <div className="mt-8 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-6">
                   <h2 className="text-xl font-bold text-white mb-4">Recent Forecasts</h2>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {history.slice(0, 5).map((forecast, idx) => (
+                  <div className="space-y-3">
+                    {history.map((forecast, idx) => (
                       <div key={idx} className="p-4 bg-slate-800/50 rounded-lg border border-cyan-500/20 hover:border-cyan-400/50 transition">
                         <div className="flex items-center justify-between">
                           <div>
@@ -382,6 +399,15 @@ function ForecastContent() {
                       </div>
                     ))}
                   </div>
+                  {history.length < historyTotal && (
+                    <button
+                      onClick={loadMoreHistory}
+                      disabled={historyLoadingMore}
+                      className="mt-4 w-full py-2 text-sm text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/10 transition disabled:opacity-50"
+                    >
+                      {historyLoadingMore ? 'Loading...' : `Load more (${history.length} / ${historyTotal})`}
+                    </button>
+                  )}
                 </div>
               )}
             </>
