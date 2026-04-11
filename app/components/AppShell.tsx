@@ -16,6 +16,7 @@ import {
   UserCircle2,
   FlaskConical,
   X,
+  Settings,
 } from 'lucide-react';
 import Footer from '@/app/components/Footer';
 import { useAuth } from '@/app/context/AuthContext';
@@ -39,6 +40,7 @@ const NAV_BY_PERSONA: Record<string, NavItem[]> = {
     { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
     { href: '/alerts',      label: 'Alerts',           icon: <AlertCircle size={20} /> },
     { href: '/forecast',    label: 'Forecast',         icon: <BarChart3 size={20} /> },
+    { href: '/settings',    label: 'Settings',         icon: <Settings size={20} /> },
   ],
   planners: [
     { href: '/dashboard',  label: 'Dashboard',  icon: <Home size={20} /> },
@@ -46,6 +48,7 @@ const NAV_BY_PERSONA: Record<string, NavItem[]> = {
     { href: '/policy',     label: 'Policy',     icon: <Settings2 size={20} /> },
     { href: '/optimizer',  label: 'Optimizer',  icon: <TrendingUp size={20} /> },
     { href: '/alerts',     label: 'Alerts',     icon: <AlertCircle size={20} /> },
+    { href: '/settings',   label: 'Settings',   icon: <Settings size={20} /> },
   ],
   researchers: [
     { href: '/forecast',    label: 'Forecast',         icon: <BarChart3 size={20} /> },
@@ -55,6 +58,7 @@ const NAV_BY_PERSONA: Record<string, NavItem[]> = {
     { href: '/location-gw', label: 'Location Insight', icon: <MapPin size={20} /> },
     { href: '/alerts',      label: 'Alerts',           icon: <AlertCircle size={20} /> },
     { href: '/drivers',     label: 'Drivers',          icon: <BarChart3 size={20} /> },
+    { href: '/settings',    label: 'Settings',         icon: <Settings size={20} /> },
   ],
 };
 
@@ -69,6 +73,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: '/alerts',      label: 'Alerts',           icon: <AlertCircle size={20} /> },
   { href: '/drivers',     label: 'Drivers',          icon: <BarChart3 size={20} /> },
   { href: '/simulator',   label: 'Simulator',        icon: <FlaskConical size={20} /> },
+  { href: '/settings',    label: 'Settings',         icon: <Settings size={20} /> },
 ];
 
 function navForPersona(p: Persona | null): NavItem[] {

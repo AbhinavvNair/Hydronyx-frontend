@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import { apiPatch } from '@/lib/api';
 
 export type Persona = 'farmers' | 'planners' | 'researchers';
 
@@ -30,7 +31,7 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     setReady(true);
   }, []);
 
-  const setPersona = (p: Persona | null) => {
+  const setPersona = useCallback((p: Persona | null) => {
     setPersonaState(p);
     try {
       if (!p) {
@@ -41,9 +42,13 @@ export function PersonaProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-  };
+    // Sync to backend (fire-and-forget — local state is authoritative)
+    if (p) {
+      apiPatch('/api/auth/me', { persona: p }).catch(() => {});
+    }
+  }, []);
 
-  const value = useMemo(() => ({ persona, setPersona, ready }), [persona, ready]);
+  const value = useMemo(() => ({ persona, setPersona, ready }), [persona, setPersona, ready]);
 
   return <PersonaContext.Provider value={value}>{children}</PersonaContext.Provider>;
 }

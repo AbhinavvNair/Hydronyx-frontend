@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ProtectedRoute } from '@/app/components/ProtectedRoute';
-import Footer from '@/app/components/Footer';
+import { AppShell } from '@/app/components/AppShell';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { fetchWithAuth } from '@/lib/api';
 
 interface TrajectoryPoint {
@@ -91,19 +89,8 @@ function SimulatorContent() {
     : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a1428] via-[#0d1b3d] to-[#0a1428]">
-      <header className="sticky top-0 z-40 bg-[#0a1428]/95 backdrop-blur-md border-b border-cyan-500/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition">
-            <ArrowLeft className="w-5 h-5 text-cyan-400" />
-            <span className="text-white">Back</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-white">Policy Simulator (SCM)</h1>
-          <div className="w-20"></div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <AppShell title="Policy Simulator (SCM)">
+      <div className="p-8 flex-1">
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
             {error}
@@ -130,53 +117,25 @@ function SimulatorContent() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Pumping change (%)</label>
-                <input
-                  type="range"
-                  min="-50"
-                  max="50"
-                  value={pumpingChange}
-                  onChange={(e) => setPumpingChange(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
-                />
+                <input type="range" min="-50" max="50" value={pumpingChange} onChange={(e) => setPumpingChange(Number(e.target.value))} className="w-full accent-cyan-400" />
                 <p className="text-cyan-400 text-sm mt-2">{pumpingChange}%</p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Recharge structures</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  value={rechargeStructures}
-                  onChange={(e) => setRechargeStructures(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
-                />
+                <input type="range" min="0" max="50" value={rechargeStructures} onChange={(e) => setRechargeStructures(Number(e.target.value))} className="w-full accent-cyan-400" />
                 <p className="text-cyan-400 text-sm mt-2">{rechargeStructures}</p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Crop intensity change (%)</label>
-                <input
-                  type="range"
-                  min="-50"
-                  max="50"
-                  value={cropIntensityChange}
-                  onChange={(e) => setCropIntensityChange(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
-                />
+                <input type="range" min="-50" max="50" value={cropIntensityChange} onChange={(e) => setCropIntensityChange(Number(e.target.value))} className="w-full accent-cyan-400" />
                 <p className="text-cyan-400 text-sm mt-2">{cropIntensityChange}%</p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-300 mb-3">Months ahead</label>
-                <input
-                  type="range"
-                  min="1"
-                  max="24"
-                  value={monthsAhead}
-                  onChange={(e) => setMonthsAhead(Number(e.target.value))}
-                  className="w-full accent-cyan-400"
-                />
+                <input type="range" min="1" max="24" value={monthsAhead} onChange={(e) => setMonthsAhead(Number(e.target.value))} className="w-full accent-cyan-400" />
                 <p className="text-cyan-400 text-sm mt-2">{monthsAhead}</p>
               </div>
 
@@ -195,7 +154,6 @@ function SimulatorContent() {
               <div className="space-y-6">
                 <div className="p-6 rounded-lg border border-cyan-500/30 bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
                   <h3 className="text-lg font-bold text-white mb-4">Counterfactual analysis (SCM)</h3>
-
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <p className="text-gray-400 text-sm">Baseline (final month)</p>
@@ -210,7 +168,6 @@ function SimulatorContent() {
                       </p>
                     </div>
                   </div>
-
                   <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-cyan-500/10 border border-green-500/30">
                     <p className="text-green-400 font-semibold">
                       Mean effect: {results.mean_effect >= 0 ? '+' : ''}{results.mean_effect.toFixed(3)} m
@@ -227,28 +184,10 @@ function SimulatorContent() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                       <XAxis dataKey="month" stroke="#888" />
                       <YAxis stroke="#888" />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: '#0a1428', border: '1px solid #00d4ff', borderRadius: '8px' }}
-                        formatter={(value: number) => [value?.toFixed(2) ?? value, '']}
-                      />
+                      <Tooltip contentStyle={{ backgroundColor: '#0a1428', border: '1px solid #00d4ff', borderRadius: '8px' }} formatter={(value: number) => [value?.toFixed(2) ?? value, '']} />
                       <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="baseline"
-                        stroke="#888"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        name="Baseline"
-                        dot={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="intervention"
-                        stroke="#00d4ff"
-                        strokeWidth={3}
-                        name="With policy"
-                        dot={false}
-                      />
+                      <Line type="monotone" dataKey="baseline" stroke="#888" strokeWidth={2} strokeDasharray="5 5" name="Baseline" dot={false} />
+                      <Line type="monotone" dataKey="intervention" stroke="#00d4ff" strokeWidth={3} name="With policy" dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -260,9 +199,8 @@ function SimulatorContent() {
             )}
           </div>
         </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

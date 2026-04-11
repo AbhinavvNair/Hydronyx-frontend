@@ -38,54 +38,43 @@ function DashboardContent() {
   const [physicsCompliance, setPhysicsCompliance] = useState<number | null>(null);
 
   useEffect(() => {
-    loadMetrics();
-    loadChartData();
+    loadDashboardData();
   }, []);
 
-  async function loadMetrics() {
+  async function loadDashboardData() {
     setMetricsLoading(true);
-    setMetricsError('');
-    try {
-      const [historyRes, metricsRes] = await Promise.all([
-        fetchWithAuth('/api/forecast/history?limit=5'),
-        fetchWithAuth('/api/validation/metrics'),
-      ]);
-
-      if (!metricsRes.ok) throw new Error('Failed to load model metrics');
-      const metrics = await metricsRes.json();
-      if (metrics?.metrics) {
-        setAccuracy(metrics.metrics.r_squared != null ? Math.round(metrics.metrics.r_squared * 1000) / 10 : null);
-        setPhysicsCompliance(metrics.metrics.physics_compliance != null ? Math.round(metrics.metrics.physics_compliance * 100) : null);
-      }
-
-      if (historyRes.ok) {
-        const history = await historyRes.json();
-        const latestForecast: ForecastHistoryItem | undefined = (history.forecasts || [])[0];
-        if (latestForecast?.result) {
-          setPredictedLevel(latestForecast.result.predicted_level);
-          setCurrentLevel(latestForecast.params?.lag_gw ?? latestForecast.result.predicted_level);
-        }
-      }
-    } catch (e) {
-      setMetricsError(e instanceof Error ? e.message : 'Failed to load metrics');
-    } finally {
-      setMetricsLoading(false);
-    }
-  }
-
-  async function loadChartData() {
     setChartLoading(true);
+    setMetricsError('');
     setChartError('');
     try {
-      const [historyRes, statesRes] = await Promise.all([
+      // Single history fetch shared by metrics and chart
+      const [historyRes, metricsRes, statesRes] = await Promise.all([
         fetchWithAuth('/api/forecast/history?limit=5'),
+        fetchWithAuth('/api/validation/metrics'),
         fetchWithAuth('/api/states'),
       ]);
 
-      const forecasts: ForecastHistoryItem[] = historyRes.ok ? (await historyRes.json()).forecasts || [] : [];
-      const stateList: string[] = statesRes.ok ? await statesRes.json() : [];
+      // --- Metrics ---
+      if (metricsRes.ok) {
+        const metrics = await metricsRes.json();
+        if (metrics?.metrics) {
+          setAccuracy(metrics.metrics.r_squared != null ? Math.round(metrics.metrics.r_squared * 1000) / 10 : null);
+          setPhysicsCompliance(metrics.metrics.physics_compliance != null ? Math.round(metrics.metrics.physics_compliance * 100) : null);
+        }
+      } else {
+        setMetricsError('Failed to load model metrics');
+      }
 
-      const latestForecast = forecasts[0];
+      const forecasts: ForecastHistoryItem[] = historyRes.ok ? (await historyRes.json()).forecasts || [] : [];
+      const latestForecast: ForecastHistoryItem | undefined = forecasts[0];
+      if (latestForecast?.result) {
+        setPredictedLevel(latestForecast.result.predicted_level);
+        setCurrentLevel(latestForecast.params?.lag_gw ?? latestForecast.result.predicted_level);
+      }
+      setMetricsLoading(false);
+
+      // --- Chart ---
+      const stateList: string[] = statesRes.ok ? await statesRes.json() : [];
       const stateForTimeseries = latestForecast?.params?.state || stateList[0] || 'maharashtra';
       const tsRes = await fetchWithAuth(`/api/timeseries/state?state=${encodeURIComponent(stateForTimeseries)}`);
 
@@ -104,8 +93,11 @@ function DashboardContent() {
       }
       setChartData(points);
     } catch (e) {
-      setChartError(e instanceof Error ? e.message : 'Failed to load chart data');
+      const msg = e instanceof Error ? e.message : 'Failed to load';
+      setMetricsError((prev) => prev || msg);
+      setChartError((prev) => prev || msg);
     } finally {
+      setMetricsLoading(false);
       setChartLoading(false);
     }
   }

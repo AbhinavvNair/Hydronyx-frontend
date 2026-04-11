@@ -1,12 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiUrl } from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiUrl, setSessionExpiredHandler } from '@/lib/api';
 
 interface User {
   email: string;
   name: string;
   id: string;
+  role?: string;
+  persona?: string | null;
 }
 
 interface AuthContextType {
@@ -14,7 +16,9 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updates: Partial<Pick<User, 'name' | 'persona'>>) => void;
   isAuthenticated: boolean;
+  sessionExpired: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,8 +26,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
-  // Check if user is already logged in (token carried automatically via httpOnly cookie)
+  const handleSessionExpired = useCallback(() => {
+    setUser(null);
+    setSessionExpired(true);
+  }, []);
+
+  useEffect(() => {
+    setSessionExpiredHandler(handleSessionExpired);
+  }, [handleSessionExpired]);
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -32,10 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         if (response.ok) {
           const data = await response.json();
-          setUser({ email: data.email, name: data.name, id: data.id });
+          setUser({ email: data.email, name: data.name, id: data.id, role: data.role, persona: data.persona });
         }
-      } catch (error) {
-        console.error('Auth check failed:', error);
+      } catch {
+        // Network error — stay logged out
       }
       setLoading(false);
     };
@@ -45,8 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     setLoading(true);
+    setSessionExpired(false);
     try {
-      // credentials:'include' ensures the browser stores the httpOnly cookie the server sets
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -55,17 +68,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Login failed');
+        const err = await response.json().catch(() => ({ detail: 'Login failed' }));
+        throw new Error(err.detail || 'Login failed');
       }
 
-      // Fetch profile — cookie is sent automatically
       const userResponse = await fetch(`${apiUrl}/api/auth/me`, {
         credentials: 'include',
       });
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        setUser({ email: userData.email, name: userData.name, id: userData.id });
+        setUser({ email: userData.email, name: userData.name, id: userData.id, role: userData.role, persona: userData.persona });
       }
     } finally {
       setLoading(false);
@@ -75,11 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' });
-    } catch (error) {
-      console.error('Logout request failed:', error);
+    } catch {
+      // ignore
     }
     setUser(null);
+    setSessionExpired(false);
   };
+
+  const updateUser = useCallback((updates: Partial<Pick<User, 'name' | 'persona'>>) => {
+    setUser((prev) => prev ? { ...prev, ...updates } : prev);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -88,9 +106,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         logout,
+        updateUser,
         isAuthenticated: !!user,
+        sessionExpired,
       }}
     >
+      {sessionExpired && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-yellow-500/90 text-slate-900 font-semibold px-6 py-3 rounded-lg shadow-lg">
+          Your session has expired. Please{' '}
+          <a href="/login" className="underline">sign in again</a>.
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

@@ -169,6 +169,10 @@ export default function Login() {
         <p className="text-center text-cyan-100/40 text-xs mt-8 font-light tracking-wider">
           Physics-Informed Groundwater Monitoring System
         </p>
+        <div className="text-center mt-3 flex justify-center gap-4 text-xs text-gray-600">
+          <Link href="/terms" className="hover:text-cyan-500 transition">Terms</Link>
+          <Link href="/privacy" className="hover:text-cyan-500 transition">Privacy</Link>
+        </div>
       </div>
     </div>
   );
