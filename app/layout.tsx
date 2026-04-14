@@ -4,7 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { PersonaProvider } from "./context/PersonaContext";
 
 export const metadata: Metadata = {
-  title: "HydroAI - Physics-Informed Groundwater Monitoring",
+  title: "Hydronyx - Physics-Informed Groundwater Monitoring",
   description: "Leveraging Physics-Informed AI for Sustainable Groundwater Management",
 };
 

@@ -4,13 +4,13 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-interface SiteData {
-  id: string;
+export interface SiteData {
+  id: string | number;
   latitude: number;
   longitude: number;
-  state: string;
+  state?: string;
   impact_score: number;
-  total_score: number;
+  total_score?: number;
   estimated_cost: number;
   explanation: string;
 }
@@ -96,7 +96,7 @@ export default function OptimizerMap({
             <strong>Impact:</strong> ${site.impact_score.toFixed(3)}
           </p>
           <p style="margin: 4px 0; font-size: 12px;">
-            <strong>Score:</strong> ${site.total_score.toFixed(3)}
+            <strong>Score:</strong> ${(site.total_score ?? site.impact_score).toFixed(3)}
           </p>
           <p style="margin: 4px 0; font-size: 12px;">
             <strong>Cost:</strong> ₹${site.estimated_cost.toFixed(1)}L

@@ -114,7 +114,7 @@ export function AppShell({
         }`}
       >
         <div className="flex items-center justify-between h-20 px-4 border-b border-cyan-500/20">
-          {sidebarOpen && <span className="text-xl font-bold text-cyan-400">HydroAI</span>}
+          {sidebarOpen && <span className="text-xl font-bold text-cyan-400">Hydronyx</span>}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="text-cyan-400 hover:bg-cyan-500/20 p-2 rounded-lg transition"

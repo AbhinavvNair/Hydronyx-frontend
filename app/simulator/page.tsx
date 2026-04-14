@@ -91,6 +91,15 @@ function SimulatorContent() {
   return (
     <AppShell title="Policy Simulator (SCM)">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-start gap-3">
+          <span className="text-purple-400 text-lg shrink-0">⚡</span>
+          <div>
+            <p className="text-purple-300 font-semibold text-sm">Quick what-if counterfactual simulation</p>
+            <p className="text-gray-400 text-xs mt-0.5">Instantly model the effect of a single policy change (e.g. reduce pumping by 20%) on groundwater trajectory using a Structural Causal Model. For saved history and PDF reports, use the <span className="text-cyan-400">Counterfactual Policy Simulator</span>.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">
             {error}

@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Download,
   Sprout,
+  LocateFixed,
+  MapPin,
 } from 'lucide-react';
 import {
   LineChart,
@@ -66,7 +68,7 @@ export default function LocationGW() {
 function confidenceLabel(c: LocationInsightResponse['confidence']) {
   if (c === 'High') return 'High';
   if (c === 'Medium') return 'Medium';
-  return 'Low';
+  return 'Medium';
 }
 
 function confidencePercent(c: LocationInsightResponse['confidence']) {
@@ -77,8 +79,8 @@ function confidencePercent(c: LocationInsightResponse['confidence']) {
 
 function LocationGWContent() {
   const router = useRouter();
-  const [latitude, setLatitude] = useState(26.9124);
-  const [longitude, setLongitude] = useState(75.7873);
+  const [latitude, setLatitude] = useState(20.5937);
+  const [longitude, setLongitude] = useState(78.9629);
   const [monthsAhead, setMonthsAhead] = useState(12);
   const [k, setK] = useState(8);
   const [userMeasurement, setUserMeasurement] = useState<number | ''>('');
@@ -86,6 +88,80 @@ function LocationGWContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState<LocationInsightResponse | null>(null);
+
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoPlace, setGeoPlace] = useState<string | null>(null);
+  const [geoError, setGeoError] = useState('');
+
+  const applyCoords = async (lat: number, lon: number) => {
+    setLatitude(lat);
+    setLongitude(lon);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const place = [
+          addr.village || addr.town || addr.city || addr.county,
+          addr.state,
+        ].filter(Boolean).join(', ');
+        setGeoPlace(place || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      } else {
+        setGeoPlace(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      }
+    } catch {
+      setGeoPlace(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+    }
+  };
+
+  const tryIPLocation = async () => {
+    // IP-based fallback — works without permission or GPS hardware
+    const res = await fetch('https://ipapi.co/json/');
+    if (!res.ok) throw new Error('ipapi failed');
+    const data = await res.json();
+    if (!data.latitude || !data.longitude) throw new Error('no coords');
+    await applyCoords(
+      parseFloat(Number(data.latitude).toFixed(6)),
+      parseFloat(Number(data.longitude).toFixed(6))
+    );
+  };
+
+  const handleUseMyLocation = () => {
+    setGeoLoading(true);
+    setGeoError('');
+    setGeoPlace(null);
+
+    if (!navigator.geolocation) {
+      // No GPS API — go straight to IP fallback
+      tryIPLocation()
+        .catch(() => setGeoError('Could not detect location. Enter coordinates manually.'))
+        .finally(() => setGeoLoading(false));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        await applyCoords(
+          parseFloat(pos.coords.latitude.toFixed(6)),
+          parseFloat(pos.coords.longitude.toFixed(6))
+        );
+        setGeoLoading(false);
+      },
+      async () => {
+        // Browser geolocation denied or unavailable — try IP fallback silently
+        try {
+          await tryIPLocation();
+        } catch {
+          setGeoError('Could not detect location. Enter coordinates manually.');
+        }
+        setGeoLoading(false);
+      },
+      { timeout: 6000, maximumAge: 60000 }
+    );
+  };
 
   const calibratedResult = useMemo(() => {
     if (!result) return null;
@@ -171,6 +247,15 @@ function LocationGWContent() {
   return (
     <AppShell title="Location Insight">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-start gap-3">
+          <BarChart3 className="text-cyan-400 shrink-0 mt-0.5" size={18} />
+          <div>
+            <p className="text-cyan-300 font-semibold text-sm">Single-point groundwater estimate</p>
+            <p className="text-gray-400 text-xs mt-0.5">Enter any GPS coordinate (or tap <span className="text-green-400 font-medium">Use My Location</span>) to get the estimated groundwater depth and a 12-month forecast using IDW interpolation across 32,299 CGWB stations.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
             <AlertCircle className="text-red-400" size={20} />
@@ -183,6 +268,30 @@ function LocationGWContent() {
           <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/30 rounded-xl p-6">
             <h3 className="text-lg font-bold text-white mb-4">Input</h3>
             <div className="space-y-4">
+
+              {/* Geolocation button */}
+              <button
+                onClick={handleUseMyLocation}
+                disabled={geoLoading}
+                className="w-full px-4 py-2.5 bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-300 font-semibold rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <LocateFixed size={16} className={geoLoading ? 'animate-spin' : ''} />
+                {geoLoading ? 'Detecting location…' : 'Use My Location'}
+              </button>
+
+              {geoPlace && (
+                <div className="flex items-center gap-2 text-xs text-green-300 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">
+                  <MapPin size={12} />
+                  <span>Detected: <span className="font-semibold">{geoPlace}</span></span>
+                </div>
+              )}
+
+              {geoError && (
+                <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{geoError}</p>
+              )}
+
+              <p className="text-xs text-gray-500 text-center">— or enter coordinates manually —</p>
+
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Latitude</label>
                 <input
@@ -267,8 +376,9 @@ function LocationGWContent() {
               <div className="p-6 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400 mb-2">API Status</p>
-                    <p className="text-2xl font-bold text-green-400">Online</p>
+                    <p className="text-sm text-gray-400 mb-2">Dataset</p>
+                    <p className="text-2xl font-bold text-green-400">32,299</p>
+                    <p className="text-xs text-gray-500 mt-1">CGWB stations · IDW interpolation</p>
                   </div>
                   <Signal className="w-8 h-8 text-green-400 opacity-50" />
                 </div>

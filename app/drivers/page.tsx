@@ -37,9 +37,16 @@ function DriversContent() {
   const [contributions, setContributions] = useState<DriverContribution[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [states] = useState<string[]>([
+  const [states, setStates] = useState<string[]>([
     'Maharashtra', 'Haryana', 'Punjab', 'Uttar Pradesh', 'Rajasthan', 'Gujarat',
   ]);
+
+  useEffect(() => {
+    fetchWithAuth('/api/states')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (Array.isArray(data) && data.length) setStates(data); })
+      .catch(() => {/* keep fallback list */});
+  }, []);
 
   const loadDrivers = async () => {
     setLoading(true);
@@ -72,6 +79,15 @@ function DriversContent() {
   return (
     <AppShell title="Drivers of Change">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-3">
+          <span className="text-amber-400 text-lg shrink-0">📊</span>
+          <div>
+            <p className="text-amber-300 font-semibold text-sm">SHAP-based attribution — why is groundwater changing?</p>
+            <p className="text-gray-400 text-xs mt-0.5">Breaks down how much each factor (rainfall, pumping, crop patterns, temperature) contributes to the current groundwater trend in a state. Uses SHAP values from the ST-GNN model to explain each driver's share.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
             <AlertCircle className="text-red-400" size={20} />

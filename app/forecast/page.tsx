@@ -128,6 +128,8 @@ function ForecastContent() {
       const latest = forecastList[0];
       if (latest) {
         setCurrentForecast(latest);
+        if (latest.params?.lag_gw != null) setLaggingGW(latest.params.lag_gw);
+        if (latest.params?.rainfall_value != null) setRainfall(latest.params.rainfall_value);
         const state = latest.params?.state || list[0];
         const district = latest.params?.district || '';
         setSelectedState(state || '');
@@ -243,8 +245,9 @@ function ForecastContent() {
                 <div className="p-6 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-400 mb-2">API Status</p>
-                      <p className="text-2xl font-bold text-green-400">Online</p>
+                      <p className="text-sm text-gray-400 mb-2">Model</p>
+                      <p className="text-2xl font-bold text-green-400">ST-GNN</p>
+                      <p className="text-xs text-gray-500 mt-1">Spatiotemporal GNN</p>
                     </div>
                     <Signal className="w-8 h-8 text-green-400 opacity-50" />
                   </div>
@@ -253,8 +256,9 @@ function ForecastContent() {
                 <div className="p-6 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-400 mb-2">GNN Model</p>
-                      <p className="text-2xl font-bold text-purple-400">Active</p>
+                      <p className="text-sm text-gray-400 mb-2">Physics</p>
+                      <p className="text-2xl font-bold text-purple-400">Enabled</p>
+                      <p className="text-xs text-gray-500 mt-1">Darcy's law constraints</p>
                     </div>
                     <BarChart3 className="w-8 h-8 text-purple-400 opacity-50" />
                   </div>

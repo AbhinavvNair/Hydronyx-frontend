@@ -24,7 +24,7 @@ function PersonasContent() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition">
             <Droplet className="w-8 h-8 text-cyan-400 fill-cyan-400/20" />
-            <span className="text-xl font-bold tracking-wide">HydroAI</span>
+            <span className="text-xl font-bold tracking-wide">Hydronyx</span>
           </Link>
           <div className="text-sm text-gray-300">Choose your workspace</div>
         </div>
@@ -39,7 +39,7 @@ function PersonasContent() {
                 Start with your role
               </h1>
               <p className="mt-4 text-cyan-100/70 leading-relaxed">
-                HydroAI organizes tools by what you need to do. Pick a workspace to get the most relevant insights and actions.
+                Hydronyx organizes tools by what you need to do. Pick a workspace to get the most relevant insights and actions.
               </p>
             </div>
 

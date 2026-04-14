@@ -176,6 +176,15 @@ function AlertsContent() {
   return (
     <AppShell title="Groundwater Stress Alerts">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3">
+          <span className="text-red-400 text-lg shrink-0">🔔</span>
+          <div>
+            <p className="text-red-300 font-semibold text-sm">Real-time groundwater stress monitoring</p>
+            <p className="text-gray-400 text-xs mt-0.5">Automatically scans all districts for critically deep or rapidly declining groundwater levels. Alerts are classified Critical / High / Medium and refreshed every minute from live prediction data.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
             <AlertCircle className="text-red-400 shrink-0" size={20} />

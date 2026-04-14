@@ -16,16 +16,6 @@ import {
 import RiskDisclaimer from '@/app/components/RiskDisclaimer';
 import { fetchWithAuth } from '@/lib/api';
 
-interface SiteData {
-  id: string | number;
-  explanation: string;
-  impact_score: number;
-  estimated_cost: number;
-  latitude: number;
-  longitude: number;
-  state?: string;
-  total_score?: number;
-}
 
 interface OptimizationResult {
   selected_sites: SiteData[];
@@ -38,6 +28,8 @@ interface OptimizationResult {
     n_sites_selected?: number;
   };
 }
+
+import type { SiteData } from './OptimizerMap';
 
 const MapComponent = dynamic(() => import('./OptimizerMap'), {
   loading: () => <div className="w-full h-full flex items-center justify-center bg-slate-900 text-gray-400">Loading map...</div>,
@@ -135,6 +127,15 @@ function OptimizerContent() {
           </div>
         )}
 
+        {/* Page purpose */}
+        <div className="mx-8 mt-6 mb-2 p-4 bg-teal-500/10 border border-teal-500/20 rounded-xl flex items-start gap-3">
+          <span className="text-teal-400 text-lg shrink-0">🎯</span>
+          <div>
+            <p className="text-teal-300 font-semibold text-sm">Multi-objective recharge site selection</p>
+            <p className="text-gray-400 text-xs mt-0.5">Finds the best locations to build groundwater recharge structures (check-dams, percolation ponds) in a state. Balances impact (groundwater benefit), cost, and equity across districts using NSGA-II optimisation.</p>
+          </div>
+        </div>
+
         <div className="mx-8 mt-4">
           <RiskDisclaimer variant="optimizer" />
         </div>
@@ -147,8 +148,9 @@ function OptimizerContent() {
               <div className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">API Status</p>
-                    <p className="text-lg font-bold text-green-400">Online</p>
+                    <p className="text-xs text-gray-400 mb-1">Method</p>
+                    <p className="text-lg font-bold text-green-400">Multi-obj</p>
+                    <p className="text-xs text-gray-500">NSGA-II optimisation</p>
                   </div>
                   <Signal className="w-6 h-6 text-green-400 opacity-50" />
                 </div>

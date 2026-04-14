@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { AppShell } from '@/app/components/AppShell';
 import { fetchWithAuth } from '@/lib/api';
-import { AlertCircle, Download, MapPin, Zap } from 'lucide-react';
+import { AlertCircle, Download, MapPin, Zap, LocateFixed } from 'lucide-react';
 
 import type { PlotGridPoint, RecommendedPoint } from './MyFarmMap';
 
@@ -185,8 +185,8 @@ function summary(insight: LocationInsightResponse | null, pumping: PumpingLevel)
 }
 
 export default function MyFarm() {
-  const [latitude, setLatitude] = useState(26.9124);
-  const [longitude, setLongitude] = useState(75.7873);
+  const [latitude, setLatitude] = useState(20.5937);
+  const [longitude, setLongitude] = useState(78.9629);
   const [k, setK] = useState(8);
 
   const [pumping, setPumping] = useState<PumpingLevel>('medium');
@@ -203,6 +203,77 @@ export default function MyFarm() {
 
   const containerIdRef = useRef(`leaflet-${Math.random().toString(36).slice(2, 9)}`);
   const [showMap, setShowMap] = useState(true);
+
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoPlace, setGeoPlace] = useState<string | null>(null);
+  const [geoError, setGeoError] = useState('');
+
+  const applyCoords = async (lat: number, lon: number) => {
+    setLatitude(lat);
+    setLongitude(lon);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const addr = data.address || {};
+        const place = [
+          addr.village || addr.town || addr.city || addr.county,
+          addr.state,
+        ].filter(Boolean).join(', ');
+        setGeoPlace(place || `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      } else {
+        setGeoPlace(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+      }
+    } catch {
+      setGeoPlace(`${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+    }
+  };
+
+  const tryIPLocation = async () => {
+    const res = await fetch('https://ipapi.co/json/');
+    if (!res.ok) throw new Error('ipapi failed');
+    const data = await res.json();
+    if (!data.latitude || !data.longitude) throw new Error('no coords');
+    await applyCoords(
+      parseFloat(Number(data.latitude).toFixed(6)),
+      parseFloat(Number(data.longitude).toFixed(6))
+    );
+  };
+
+  const handleUseMyLocation = () => {
+    setGeoLoading(true);
+    setGeoError('');
+    setGeoPlace(null);
+
+    if (!navigator.geolocation) {
+      tryIPLocation()
+        .catch(() => setGeoError('Could not detect location. Enter coordinates manually.'))
+        .finally(() => setGeoLoading(false));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        await applyCoords(
+          parseFloat(pos.coords.latitude.toFixed(6)),
+          parseFloat(pos.coords.longitude.toFixed(6))
+        );
+        setGeoLoading(false);
+      },
+      async () => {
+        try {
+          await tryIPLocation();
+        } catch {
+          setGeoError('Could not detect location. Enter coordinates manually.');
+        }
+        setGeoLoading(false);
+      },
+      { timeout: 6000, maximumAge: 60000 }
+    );
+  };
 
   useEffect(() => {
     containerIdRef.current = `leaflet-${Date.now().toString(36)}`;
@@ -390,6 +461,15 @@ export default function MyFarm() {
   return (
     <AppShell title="My Farm">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-xl flex items-start gap-3">
+          <MapPin className="text-green-400 shrink-0 mt-0.5" size={18} />
+          <div>
+            <p className="text-green-300 font-semibold text-sm">Field-level borewell risk analysis</p>
+            <p className="text-gray-400 text-xs mt-0.5">Draw your field boundary on the map to get a zone-wise risk map (Green / Yellow / Red), the best point to drill, and a 3-year groundwater outlook adjusted for your pumping intensity.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
             <AlertCircle className="text-red-400" size={20} />
@@ -556,6 +636,27 @@ export default function MyFarm() {
               <h3 className="text-lg font-bold text-white">Farm inputs</h3>
 
               <div className="mt-4 space-y-4">
+
+                {/* Geolocation */}
+                <button
+                  onClick={handleUseMyLocation}
+                  disabled={geoLoading}
+                  className="w-full px-3 py-2 bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-300 text-sm font-semibold rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <LocateFixed size={14} className={geoLoading ? 'animate-spin' : ''} />
+                  {geoLoading ? 'Detecting…' : 'Use My Location'}
+                </button>
+
+                {geoPlace && (
+                  <div className="flex items-center gap-2 text-xs text-green-300 bg-green-500/10 border border-green-500/20 rounded px-2 py-1.5">
+                    <MapPin size={11} />
+                    <span><span className="font-semibold">{geoPlace}</span></span>
+                  </div>
+                )}
+                {geoError && (
+                  <p className="text-xs text-red-400">{geoError}</p>
+                )}
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-300 mb-2">Latitude</label>

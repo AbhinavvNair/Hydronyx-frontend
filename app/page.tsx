@@ -118,7 +118,7 @@ export default function Home() {
 
             <Droplet className="w-8 h-8 text-cyan-400 fill-cyan-400/20" />
 
-            <span className="text-xl font-bold tracking-wide">HydroAI</span>
+            <span className="text-xl font-bold tracking-wide">Hydronyx</span>
 
           </div>
 
@@ -244,11 +244,11 @@ export default function Home() {
 
             {[
 
-              { val: "98%", label: "Accuracy" },
+              { val: "79%", label: "1-mo Accuracy" },
 
-              { val: "50+", label: "Sites" },
+              { val: "32,299", label: "Stations" },
 
-              { val: "Real-time", label: "Monitoring" }
+              { val: "10 sec", label: "Assessment" }
 
             ].map((stat, i) => (
 

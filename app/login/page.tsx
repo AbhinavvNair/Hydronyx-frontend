@@ -82,7 +82,7 @@ export default function Login() {
         <div className="bg-[#0a1428]/60 backdrop-blur-xl border border-cyan-500/30 rounded-2xl p-8 shadow-[0_0_40px_rgba(6,182,212,0.1)]">
           <div className="flex items-center justify-center space-x-2 mb-8">
             <Droplet className="w-8 h-8 text-cyan-400 fill-cyan-400/20" />
-            <span className="text-2xl font-bold text-white tracking-wide">HydroAI</span>
+            <span className="text-2xl font-bold text-white tracking-wide">Hydronyx</span>
           </div>
 
           <h1 className="text-3xl font-bold text-center text-white mb-8 text-shadow-glow">Sign In</h1>

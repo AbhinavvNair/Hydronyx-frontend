@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
-            <h3 className="text-xl font-bold text-white mb-3">HydroAI</h3>
+            <h3 className="text-xl font-bold text-white mb-3">Hydronyx</h3>
             <p className="text-gray-400 text-sm leading-relaxed">
               Leveraging Physics-Informed AI for sustainable groundwater
               management.
@@ -96,7 +96,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-10 pt-6 border-t border-cyan-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-gray-500">
-            © 2026 HydroAI. All rights reserved.
+            © 2026 Hydronyx. All rights reserved.
           </p>
 
           <div className="flex gap-4 text-xs">

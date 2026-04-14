@@ -179,6 +179,15 @@ function PolicyContent() {
   return (
     <AppShell title="Counterfactual Policy Simulator">
       <div className="p-8 flex-1">
+        {/* Page purpose */}
+        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
+          <span className="text-blue-400 text-lg shrink-0">🏛</span>
+          <div>
+            <p className="text-blue-300 font-semibold text-sm">Full counterfactual analysis with history &amp; export</p>
+            <p className="text-gray-400 text-xs mt-0.5">Combine multiple interventions (pumping reduction + recharge structures + crop intensity) and see their causal effect on groundwater. Results are saved to your history and exportable as a PDF report for policymakers.</p>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-3">
             <AlertCircle className="text-red-400" size={20} />
@@ -200,8 +209,9 @@ function PolicyContent() {
           <div className="p-6 bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-2">API Status</p>
-                <p className="text-2xl font-bold text-green-400">Online</p>
+                <p className="text-sm text-gray-400 mb-2">Method</p>
+                <p className="text-2xl font-bold text-green-400">SCM</p>
+                <p className="text-xs text-gray-500 mt-1">Structural Causal Model</p>
               </div>
               <Signal className="w-8 h-8 text-green-400 opacity-50" />
             </div>
@@ -210,8 +220,9 @@ function PolicyContent() {
           <div className="p-6 bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-400 mb-2">SCM Model</p>
-                <p className="text-2xl font-bold text-purple-400">Active</p>
+                <p className="text-sm text-gray-400 mb-2">Analysis</p>
+                <p className="text-2xl font-bold text-purple-400">Causal</p>
+                <p className="text-xs text-gray-500 mt-1">do-calculus framework</p>
               </div>
               <BarChart3 className="w-8 h-8 text-purple-400 opacity-50" />
             </div>
